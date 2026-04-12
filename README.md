@@ -2,6 +2,8 @@
 
 一套用于公众号文章排版与封面制作的在线工具集。
 
+**在线预览：** https://eternityspring.github.io/article-tools/
+
 ## 工具列表
 
 - **排版工具** (`index.html`) — Markdown 转微信公众号富文本，支持多种主题与代码高亮
