@@ -1,0 +1,27 @@
+字体与许可说明（Fonts & licenses）
+================================
+
+本目录字体用于 Article Tools 静态页面与封面导出。使用请遵守各字体许可（商业场景请自行核对）。
+
+随仓库分发的文件
+----------------
+
+1. Noto Serif SC（Regular / Bold / Black）
+   - 许可：SIL Open Font License 1.1
+   - 来源：Google Noto 项目
+
+2. JetBrains Mono（Regular / Bold）
+   - 许可：Apache License 2.0
+   - 来源：JetBrains
+
+3. MiSans Regular（界面中「小米 MiSans」）
+   - 使用受小米公布的字体许可约束；若仅需完全开源栈，可在封面中只选用 Noto / 系统黑体。
+
+4. 「系统黑体」选项不依赖本目录文件，使用各操作系统自带字体。
+
+外部脚本（vendoring 至 /vendor）
+--------------------------------
+
+- html-to-image、qrcodejs、jsQR 等见各文件头注释。
+
+更新日期：2026-04-14

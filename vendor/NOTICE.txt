@@ -1,0 +1,7 @@
+本目录为与页面同版本打包的第三方脚本，避免运行时依赖公共 CDN 可用性。
+
+- html-to-image.min.js — html-to-image（MIT）
+- qrcode.min.js — qrcodejs（MIT）
+- jsQR.js — jsQR（Apache-2.0）
+
+版本与上游 npm/cdnjs/jsdelivr 发布包一致，可按需升级并替换文件。
