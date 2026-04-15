@@ -1083,7 +1083,13 @@ const markdown = \`![图片](img://\${imageId})\`;
       this.groupConsecutiveImages(doc);
 
       Object.keys(style).forEach(selector => {
-        if (selector === 'pre' || selector === 'code' || selector === 'pre code') {
+        if (
+          selector === 'pre' ||
+          selector === 'code' ||
+          selector === 'pre code' ||
+          selector === 'inlineCode' ||
+          selector === 'codeBlock'
+        ) {
           return;
         }
 
@@ -1102,6 +1108,13 @@ const markdown = \`![图片](img://\${imageId})\`;
 
       // 引用块内若包含 fenced 代码（如每行带 > 的标题+代码），blockquote 的左边框会贯穿 margin 区，
       // 在代码窗格上下露出竖条；仅去掉边条与底纹，保留字体等其余 blockquote 样式
+      const getVisibleText = (node) =>
+        ((node && node.textContent) || '')
+          .replace(/[\u200B-\u200D\uFEFF]/g, '')
+          .replace(/\u00A0/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
       doc.querySelectorAll('blockquote').forEach((bq) => {
         if (!bq.querySelector('.md-code-block')) return;
         let s = bq.getAttribute('style') || '';
@@ -1109,17 +1122,77 @@ const markdown = \`![图片](img://\${imageId})\`;
         s = s.replace(/\bborder-radius:\s*[^;]+;?/gi, '');
         s = s.replace(/\bbackground(?:-color)?:\s*[^;]+;?/gi, '');
         s = s.replace(/\bpadding:\s*[^;]+;?/gi, '');
+        s = s.replace(/\bmargin:\s*[^;]+;?/gi, '');
         s = s.replace(/;\s*;/g, ';').replace(/^\s*;\s*|\s*;\s*$/g, '').trim();
         bq.setAttribute(
           'style',
           s +
             (s && !s.endsWith(';') ? ';' : '') +
-            ' border-left: none !important; background: transparent !important; padding: 0 !important;'
+            ' border-left: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important;'
         );
+
+        // markdown-it 在 blockquote + fenced code 场景下可能留下空的 <p> 包裹，
+        // 会在代码块上下露出一截引用底色；这里直接清掉空段落并压平其余段落间距。
+        bq.querySelectorAll('p').forEach((p) => {
+          if (!p.textContent.trim() && !p.querySelector('img, br')) {
+            p.remove();
+            return;
+          }
+          const ps = (p.getAttribute('style') || '')
+            .replace(/\bmargin:\s*[^;]+;?/gi, '')
+            .replace(/\bpadding:\s*[^;]+;?/gi, '');
+          p.setAttribute(
+            'style',
+            (ps ? ps.replace(/;\s*$/g, '') + ';' : '') + 'margin:0 !important;padding:0 !important;'
+          );
+        });
+
+        const hasMeaningfulNonCodeContent = Array.from(bq.childNodes).some((node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            return !!getVisibleText(node);
+          }
+          if (node.nodeType !== Node.ELEMENT_NODE) {
+            return false;
+          }
+          if (node.classList && node.classList.contains('md-code-block')) {
+            return false;
+          }
+          return !!getVisibleText(node) || !!node.querySelector('img, br');
+        });
+
+        if (!hasMeaningfulNonCodeContent) {
+          const fragment = document.createDocumentFragment();
+          while (bq.firstChild) {
+            fragment.appendChild(bq.firstChild);
+          }
+          bq.parentNode.replaceChild(fragment, bq);
+        }
+      });
+
+      // 清理被 blockquote + fenced code 拆出来的空引用块残留
+      doc.querySelectorAll('blockquote').forEach((bq) => {
+        const text = getVisibleText(bq);
+        if (!text && !bq.querySelector('img, br, .md-code-block')) {
+          bq.remove();
+        }
+      });
+
+      // 某些 blockquote + fenced code 组合会在代码块前后留下只含空段落/空白字符的孤儿引用块。
+      // 这类节点在视觉上只剩一截竖条，直接删除。
+      doc.querySelectorAll('blockquote').forEach((bq) => {
+        if (getVisibleText(bq)) return;
+        if (bq.querySelector('img, .md-code-block')) return;
+        const hasOnlyEmptyParagraphs = Array.from(bq.children).every((child) => {
+          if (child.tagName !== 'P') return false;
+          return !getVisibleText(child) && !child.querySelector('img, br');
+        });
+        if (hasOnlyEmptyParagraphs || !bq.children.length) {
+          bq.remove();
+        }
       });
 
       // fenced 代码块：应用主题 pre（ margin 提到外层 .md-code-block ）
-      const preCss = style.pre || '';
+      const preCss = style.codeBlock || style.pre || '';
       const bodyPre = preCss
         .replace(/margin-top:\s*[^;]+;?/gi, '')
         .replace(/margin-bottom:\s*[^;]+;?/gi, '');
@@ -1138,15 +1211,22 @@ const markdown = \`![图片](img://\${imageId})\`;
       doc.querySelectorAll('.md-code-block-body code').forEach((el) => {
         el.setAttribute(
           'style',
-          'display:block;white-space:pre-wrap;word-break:break-all;margin:0 !important;padding:0 !important;border:none;background:transparent;color:inherit;font-family:inherit;font-size:inherit;line-height:inherit;'
+          'display:block;white-space:pre-wrap;word-break:break-all;margin:0 !important;padding:0 !important;border:none;border-radius:0 !important;background:transparent !important;color:inherit;font-family:inherit;font-size:inherit;line-height:inherit;box-shadow:none !important;'
+        );
+      });
+      doc.querySelectorAll('pre > code').forEach((el) => {
+        el.setAttribute(
+          'style',
+          'display:block;white-space:pre-wrap;word-break:break-all;margin:0 !important;padding:0 !important;border:none !important;border-radius:0 !important;background:transparent !important;color:inherit;font-family:inherit;font-size:inherit;line-height:inherit;box-shadow:none !important;'
         );
       });
 
       // 行内 code（非 fenced、非标题内；标题内 code 由下一步覆盖）
-      const codeCss = style.code || '';
+      const codeCss = style.inlineCode || style.code || '';
       if (codeCss) {
         doc.querySelectorAll('code').forEach((el) => {
           if (el.closest('.md-code-block')) return;
+          if (el.closest('pre')) return;
           if (el.closest('h1, h2, h3, h4, h5, h6')) return;
           const cur = el.getAttribute('style') || '';
           el.setAttribute('style', cur + (cur && !cur.endsWith(';') ? ';' : '') + ' ' + codeCss);
@@ -1615,15 +1695,92 @@ const markdown = \`![图片](img://\${imageId})\`;
           block.parentNode.replaceChild(pre, block);
         });
 
-        // 列表项扁平化
-        const listItems = doc.querySelectorAll('li');
-        listItems.forEach(li => {
-          let text = li.textContent || li.innerText;
-          text = text.replace(/\n/g, ' ').replace(/\r/g, ' ').replace(/\s+/g, ' ').trim();
-          li.innerHTML = '';
-          li.textContent = text;
-          const currentStyle = li.getAttribute('style') || '';
-          li.setAttribute('style', currentStyle);
+        // 公众号外链不稳定：Markdown [文案](url) → 纯文本「文案 url」（如 [aaa](xxx) → aaa xxx）
+        Array.from(doc.querySelectorAll('a[href]')).forEach((a) => {
+          const href = (a.getAttribute('href') || '').trim();
+          let text = (a.textContent || '').trim();
+          if (!text) {
+            const im = a.querySelector('img');
+            if (im) text = (im.getAttribute('alt') || '').trim() || '图片';
+          }
+          if (!href && !text) {
+            a.remove();
+            return;
+          }
+          const plain = href && text ? `${text} ${href}` : href || text;
+          a.parentNode.replaceChild(doc.createTextNode(plain), a);
+        });
+
+        // 公众号对 <strong>/<b> 识别不稳定：改为 span + 内联字重，保留子节点与主题里 strong 的 color 等
+        let boldEl;
+        while ((boldEl = doc.querySelector('strong, b'))) {
+          const span = doc.createElement('span');
+          const st = (boldEl.getAttribute('style') || '').trim();
+          span.setAttribute(
+            'style',
+            (st ? st.replace(/;\s*$/, '') + ';' : '') + 'font-weight:700!important;'
+          );
+          while (boldEl.firstChild) span.appendChild(boldEl.firstChild);
+          boldEl.parentNode.replaceChild(span, boldEl);
+        }
+
+        let emEl;
+        while ((emEl = doc.querySelector('em'))) {
+          const span = doc.createElement('span');
+          const st = (emEl.getAttribute('style') || '').trim();
+          span.setAttribute(
+            'style',
+            (st ? st.replace(/;\s*$/, '') + ';' : '') + 'font-style:italic!important;'
+          );
+          while (emEl.firstChild) span.appendChild(emEl.firstChild);
+          emEl.parentNode.replaceChild(span, emEl);
+        }
+
+        // 列表项：markdown-it 常为 <li><p>…</p></li>，块级 <p> 在公众号里会折成两行；去掉 p 壳，多段 p 用空格拼成一行
+        doc.querySelectorAll('li').forEach((li) => {
+          let first = true;
+          let p;
+          while ((p = Array.from(li.children).find((c) => c.tagName === 'P'))) {
+            if (!first) li.insertBefore(doc.createTextNode(' '), p);
+            first = false;
+            while (p.firstChild) li.insertBefore(p.firstChild, p);
+            p.remove();
+          }
+        });
+
+        // 硬换行（行尾两空格等）会生成 <br>；collapseWs 只处理文本节点，公众号仍会显示成两行
+        doc.querySelectorAll('li br').forEach((br) => {
+          if (br.closest('pre, .md-code-block')) return;
+          br.parentNode.replaceChild(doc.createTextNode(' '), br);
+        });
+
+        // 只压缩空白字符，不再整段 textContent（否则会剥掉加粗/斜体）
+        const collapseWs = (node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            node.nodeValue = node.nodeValue.replace(/\s+/g, ' ');
+            return;
+          }
+          if (node.nodeType !== Node.ELEMENT_NODE) return;
+          const kids = Array.from(node.childNodes);
+          for (let i = 0; i < kids.length; i++) collapseWs(kids[i]);
+        };
+        doc.querySelectorAll('li').forEach((li) => {
+          collapseWs(li);
+        });
+
+        // 公众号后台会把「加粗标题 + 冒号后说明」拆成块级 <section>，粘贴后成两行；用单行内包裹整段，降低被拆段概率
+        doc.querySelectorAll('li').forEach((li) => {
+          if (li.querySelector(':scope > ol, :scope > ul, :scope > blockquote')) return;
+          if (li.children.length === 1 && li.firstElementChild.getAttribute('data-li-inline-wrap') === '1') {
+            return;
+          }
+          const nodes = Array.from(li.childNodes);
+          if (nodes.length === 0) return;
+          const wrap = doc.createElement('span');
+          wrap.setAttribute('data-li-inline-wrap', '1');
+          wrap.setAttribute('style', 'display:inline!important;');
+          nodes.forEach((n) => wrap.appendChild(n));
+          li.appendChild(wrap);
         });
 
         // 深色模式适配：调整引用块样式，使用透明黑色让微信自动转换
