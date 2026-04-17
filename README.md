@@ -2,7 +2,7 @@
 
 一套本地可用的在线工具集（封面图、Markdown 排版器、二维码等），可部署在 GitHub Pages 使用。
 
-**在线预览：** https://chensoul.github.io/article-tools/
+**在线预览：** https://zhijunio.github.io/article-tools/
 
 ## 工具列表
 
