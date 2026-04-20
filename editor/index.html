@@ -1,189 +1,126 @@
 <!DOCTYPE html>
-<html lang="zh">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#f0f2f5">
-  <link rel="icon" href="../favicon.ico" sizes="any">
-  <title>Markdown 排版器</title>
-
-  <!-- Markdown 渲染库 -->
-  <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.0.0/dist/markdown-it.min.js"></script>
-
-  <!-- 代码高亮库 -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/es/highlight.min.js"></script>
-
-  <!-- Turndown - HTML 转 Markdown 库 -->
+<html lang="zh-CN"><head>
+  <meta charset="utf-8">
+  <title>公众号排版器</title>
+  <meta name="viewport" content="width=1280">
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/turndown@7.2.0/dist/turndown.js"></script>
-
-  <!-- Vue.js -->
-  <script src="https://cdn.jsdelivr.net/npm/vue@3.4.15/dist/vue.global.prod.js"></script>
-
-  <!-- html2canvas - 用于生成小红书图片 -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
-  <link rel="stylesheet" href="app.css?v=33">
+  
 </head>
 <body>
-  <div id="app">
-    <!-- 顶栏（与 cover/index.html 一致） -->
-    <header class="app-header">
-      <a class="home-link" href="../index.html" title="工具箱首页">
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M1.5 6.5L7.5 1.5L13.5 6.5V13.5H9.5V9.5H5.5V13.5H1.5V6.5Z"/>
+  <div class="app">
+    <!-- 顶部工具栏 -->
+    <header class="topbar">
+      <a class="home-link" href="../index.html" title="工具箱首页" aria-label="回到首页">
+        <svg class="ico" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1.5 6.5L7.5 1.5L13.5 6.5V13.5H9.5V9.5H5.5V13.5H1.5V6.5Z"></path>
         </svg>
       </a>
-      <span class="header-logo">Markdown 排版器 · Editor</span>
-      <span class="header-ratio">{{ markdownInput.length }} 字符</span>
-      <div class="header-spacer"></div>
-      <div class="app-header-tools">
-        <div class="editor-actions">
-          <label for="file-upload" class="upload-label upload-label-top">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            <span>上传 MD 文件</span>
-            <input type="file" id="file-upload" accept=".md,.markdown" @change="handleFileUpload" style="display: none;">
-          </label>
-        </div>
-        <div class="header-style-tools">
-          <span class="header-style-label">样式</span>
-          <select v-model="currentStyle" class="header-style-select">
-            <template v-for="grp in orderedStyleOptionGroups" :key="grp.label">
-              <optgroup :label="grp.label">
-                <option
-                  v-for="[key, style] in grp.entries"
-                  :key="key"
-                  :value="key"
-                >
-                  {{ style.name || key }}
-                </option>
-              </optgroup>
-            </template>
-          </select>
-        </div>
-        <div class="header-copy-actions">
-          <button
-            type="button"
-            class="btn btn-primary"
-            :disabled="!renderedContent"
-            @click="copyToClipboard"
-          >
-            复制到公众号
-          </button>
-          <button
-                  type="button"
-                  class="btn btn-primary"
-                  :disabled="!renderedContent"
-                  @click="copyToXArticles"
-          >
-            复制到 X
-          </button>
-        </div>
+      <div class="brand"><span>公众号排版器</span></div>
+      <span class="divider"></span>
+
+      <div class="select-theme">
+        <span style="color:var(--ink-faint); font-size:11.5px;">主题</span>
+        <select id="theme-select"></select>
       </div>
+
+      <button class="btn ghost" id="btn-rand-color" title="随机色系">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="10.5" r="2.5"></circle><circle cx="8.5" cy="7.5" r="2.5"></circle><circle cx="6.5" cy="12.5" r="2.5"></circle><path d="M12 2a10 10 0 1 0 10 10c0-1.5-1.5-2-2.5-1.5-1.1.5-2.3 0-2.5-1.5"></path></svg>
+        随机色
+      </button>
+      <button class="btn ghost" id="btn-rand-style" title="随机样式">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M8 8h.01M12 12h.01M16 16h.01M16 8h.01M8 16h.01"></path></svg>
+        随机风格
+      </button>
+      <button class="btn ghost" id="btn-sample" title="填充示例 Markdown">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="13" y2="17"></line></svg>
+        示例
+      </button>
+      <button class="btn ghost" id="btn-reset" title="重置默认">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+        重置
+      </button>
+
+      <span class="spacer"></span>
+
+      <span class="meta" id="meta-chars">0 字</span>
+      <span class="meta" id="meta-read">约 1 分钟</span>
+      <span class="divider"></span>
+
+      <button class="btn" id="btn-copy-html">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+        HTML 源码
+      </button>
+      <button class="btn primary" id="btn-copy-rich">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        复制到公众号
+      </button>
     </header>
 
-    <!-- 主内容区 -->
-    <div class="main-content">
-      <!-- 编辑器面板 -->
-      <div class="editor-panel">
-        <div class="markdown-input-container">
-          <textarea
-            ref="editorTextarea"
-            v-model="markdownInput"
-            class="markdown-input"
-            rows="1"
-            :class="{ 'drag-over': isDraggingOver }"
-            @paste="handleSmartPaste"
-            @drop="handleDrop"
-            @dragover="handleDragOver"
-            @dragenter="handleDragEnter"
-            @dragleave="handleDragLeave"
-            placeholder="# 在这里粘贴或输入 Markdown 内容
-
-## 功能特点
-
-- **实时预览**：所见即所得
-- **多种样式**：随意切换
-- **智能粘贴**：支持从飞书、Notion、Word 直接粘贴
-- **图片支持**：直接粘贴或拖拽图片，自动上传
-- **一键复制**：直接粘贴到公众号
-
-💡 提示：可以直接粘贴截图，或拖拽图片文件到这里"
-            spellcheck="false"
-          ></textarea>
+    <!-- 主区 三栏 -->
+    <main class="main">
+      <!-- 左：编辑器 -->
+      <section class="pane">
+        <div class="pane-head">
+          <span>编辑区</span>
+          <span style="text-transform:none; letter-spacing:0; color:var(--ink-faint); font-weight:400; font-size:11px;">粘贴或输入 Markdown 内容</span>
         </div>
-      </div>
-
-      <!-- 预览面板 -->
-      <div class="preview-panel">
-        <!-- 公众号预览模式 -->
-        <div ref="previewScrollRoot" class="preview-content">
-          <div v-if="!renderedContent" class="empty-state">
-            <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <h3>开始编辑</h3>
-            <p>左侧输入 Markdown，右侧实时预览</p>
-          </div>
-          <div v-else class="preview-container" v-html="renderedContent"></div>
+        <div class="pane-body" style="overflow:hidden;">
+          <textarea id="editor" spellcheck="false" placeholder="# 在这里写 Markdown..."></textarea>
         </div>
+      </section>
 
-        <!-- 小红书预览模式（已隐藏） -->
-        <!-- <div v-if="previewMode === 'xiaohongshu'" class="xiaohongshu-preview">
-          <div class="xiaohongshu-controls">
-            <button
-              class="xiaohongshu-btn"
-              :disabled="!renderedContent || xiaohongshuGenerating"
-              @click="generateXiaohongshuImages"
-            >
-              {{ xiaohongshuGenerating ? '生成中...' : '生成小红书图片' }}
-            </button>
-            <button
-              class="xiaohongshu-btn secondary"
-              :disabled="xiaohongshuImages.length === 0"
-              @click="downloadAllXiaohongshuImages"
-            >
-              批量下载 ({{ xiaohongshuImages.length }})
-            </button>
-          </div>
-
-          <div v-if="xiaohongshuGenerating" class="xiaohongshu-loading">
-            <p>正在生成小红书图片，请稍候...</p>
-          </div>
-
-          <div v-else-if="xiaohongshuImages.length === 0" class="xiaohongshu-empty">
-            <p>点击「生成小红书图片」按钮，将内容转换为适合小红书发布的多图</p>
-          </div>
-
-          <div v-else class="xiaohongshu-images-grid">
-            <div
-              v-for="(image, index) in xiaohongshuImages"
-              :key="index"
-              class="xiaohongshu-image-card"
-              @click="downloadXiaohongshuImage(image, index)"
-            >
-              <img :src="image.dataUrl" :alt="`第 ${index + 1} 张`">
-              <div class="xiaohongshu-image-label">
-                第 {{ index + 1 }} / {{ xiaohongshuImages.length }} 张
+      <!-- 中：预览 -->
+      <section class="pane preview-pane">
+        <div class="pane-head">
+          <span>预览区（手机预览 · 375px）</span>
+        </div>
+        <div class="pane-body" id="preview-scroll-root">
+          <div class="preview-wrap">
+            <div class="preview-frame">
+              <div class="preview-phone-bar">
+                <span>08:00</span>
+                <span class="dots"><span></span><span></span><span></span></span>
+                <span>100%</span>
               </div>
+              <div class="preview-article-meta">
+                <div class="title-fake">文章标题</div>
+                <div class="byline"><span class="acct">公众号名称</span><span>·</span><span>刚刚</span></div>
+              </div>
+              <div id="preview-content"></div>
             </div>
           </div>
-        </div> -->
-      </div>
-    </div>
+        </div>
+      </section>
 
-    <!-- Toast 提示 -->
-    <div v-if="toast.show" class="toast" :class="toast.type">
-      {{ toast.message }}
-    </div>
+      <!-- 右：样式面板 -->
+      <section class="pane settings-pane">
+        <div class="pane-head">
+          <span>样式调节</span>
+          <span class="actions">
+            <span style="text-transform:none; letter-spacing:0; color:var(--ink-faint); font-weight:400; font-size:11px;">实时生效</span>
+            <button type="button" class="pane-toggle-btn" id="settings-toggle" aria-label="折叠样式调节" aria-expanded="true">▸</button>
+          </span>
+        </div>
+        <div class="pane-body">
+          <div id="settings-body" class="settings-body"></div>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <!-- 加载脚本 -->
-  <script src="styles.js?v=6"></script>
-  <script src="app.js?v=17"></script>
-</body>
-</html>
+  <!-- 隐藏文件选择器 -->
+  <input type="file" id="import-file" accept="application/json" style="display:none">
+
+  <!-- Toast -->
+  <div id="toast" class="toast">提示</div>
+
+  <script src="index.presets.js"></script>
+  <script src="index.renderer.js"></script>
+  <script src="index.js"></script>
+
+
+</body></html>
