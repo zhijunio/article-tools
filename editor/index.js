@@ -1449,7 +1449,7 @@ const markdown = \`![说明](img://\${imageId})\`;
     const save = document.createElement('button');
     save.className = 'btn primary';
     save.style.width = '100%';
-    save.textContent = '保存当前为新主题';
+    save.textContent = '保存当前样式为新主题';
     save.addEventListener('click', () => {
       const n = prompt('为这套主题起个名字：', '我的主题 ' + (Object.keys(state.customThemes).length + 1));
       if (n && n.trim()) saveCustomTheme(n.trim());
