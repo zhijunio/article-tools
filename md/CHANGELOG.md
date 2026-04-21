@@ -1,6 +1,6 @@
 # Changelog · 公众号排版器
 
-记录 [`editor/`](https://github.com/zhijunio/github/article-tools/tree/main/editor) 下的变更。未单独发 npm 版本时，以日期分段。
+记录 [`md/`](https://github.com/zhijunio/github/article-tools/tree/main/md) 下的变更。未单独发 npm 版本时，以日期分段。
 
 ---
 
@@ -8,7 +8,7 @@
 
 | 类别 | 说明 |
 |------|------|
-| **入口** | 浏览器打开 `editor/index.html`；样式与逻辑见 `index.css`、`index.js`。 |
+| **入口** | 浏览器打开 `md/index.html`；样式与逻辑见 `index.css`、`index.js`。 |
 | **预设与主题** | `index.presets.js` 提供 `PRESETS`；`THEMES` 含多套配色；支持自定义主题的增删改与列表展示。 |
 | **渲染** | `index.renderer.js` 暴露 `renderMarkdown`：Markdown → 带内联样式的 HTML，便于粘贴公众号后台。 |
 | **Markdown 栈** | [marked](https://github.com/markedjs/marked) 解析；[highlight.js](https://highlightjs.org/) 代码高亮；[Turndown](https://github.com/mixmark-io/turndown) 用于从 HTML 转回 Markdown 的粘贴场景。 |
