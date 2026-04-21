@@ -275,6 +275,7 @@
     customThemes: {}, // { id: {name, settings} }
     currentThemeKey: 'claude', // 'claude' | 'minimal' | ... or 'custom:id'
     settingsPaneCollapsed: false,
+    scrollSyncEnabled: true,
   };
 
   // ============ Persistence ============
@@ -286,19 +287,32 @@
         customThemes: state.customThemes,
         currentThemeKey: state.currentThemeKey,
         settingsPaneCollapsed: state.settingsPaneCollapsed,
+        scrollSyncEnabled: state.scrollSyncEnabled,
       }));
     } catch (e) {}
   }
+
+  /** 非空白字符足够多才算「有正文」，避免仅空格/换行的脏数据跳过示例文 */
+  function isValidMdContent(s) {
+    if (!s || typeof s !== 'string') return false;
+    if (s === 'false') return false;
+    return s.replace(/\s/g, '').length >= 10;
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
       const parsed = JSON.parse(raw);
-      if (parsed.md) state.md = parsed.md;
+      // 只接受有效的 markdown 字符串（至少 10 个非空白字符）
+      if (parsed.md && typeof parsed.md === 'string' && isValidMdContent(parsed.md)) {
+        state.md = parsed.md;
+      }
       if (parsed.settings) state.settings = parsed.settings;
       if (parsed.customThemes) state.customThemes = parsed.customThemes;
       if (parsed.currentThemeKey) state.currentThemeKey = parsed.currentThemeKey;
       if (typeof parsed.settingsPaneCollapsed === 'boolean') state.settingsPaneCollapsed = parsed.settingsPaneCollapsed;
+      if (typeof parsed.scrollSyncEnabled === 'boolean') state.scrollSyncEnabled = parsed.scrollSyncEnabled;
       if (state.settings && state.settings.global && state.settings.global.maxWidth == null) {
         state.settings.global.maxWidth = 335;
       }
@@ -307,71 +321,35 @@
   }
 
   // ============ 示例文章 ============
-  const SAMPLE_MD = `![](https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?w=1200&h=400&fit=crop)
+  // 唯一数据源：同目录 sample.md（fetch）。本地请用静态服务打开目录，否则浏览器无法读本地文件。
+  // 可选：在 index.html 里增加 <script type="text/plain" id="editor-sample-md">…</script>（勿含 </script> 字样），会作为第二顺位。
+  const SAMPLE_MD_FALLBACK =
+    '# Markdown 排版器\n\n' +
+    '未能加载 `sample.md`。请在本目录执行 `python3 -m http.server` 后用 **http://** 打开页面；直接 **file://** 打开时浏览器禁止读取同目录文件。\n\n' +
+    '[GitHub · article-tools](https://github.com/zhijunio/article-tools)';
 
-# Markdown 排版器
-
-欢迎使用这款专为 \`微信公众号\` 设计的 Markdown 编辑器：左侧写作、右侧预览，一键复制到公众号后台。✨
-
-## 🎯 核心功能
-
-### 1. 智能图片处理
-
-![](https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?w=800&h=500&fit=crop)
-
-- **粘贴即用**：截图、浏览器、本地文件均可粘贴入文
-- **自动压缩**：减小体积，平均约 **50%–80%**
-- **IndexedDB 持久化**：刷新页面内容仍在
-- **短链预览**：编辑区用 \`img://\` 短链，预览再还原为图片
-
-### 2. 多图网格
-
-连续插入多张图时，自动 **2–3 列** 网格排版（类似朋友圈多图）：
-
-![](https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&h=400&fit=crop)
-![](https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&h=400&fit=crop)
-![](https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&h=400&fit=crop)
-
-### 3. 多主题样式
-
-内置 **经典 / 专业 / 花火计划** 等多组主题，涵盖素雅、科技、国风、极简等方向；切换主题即可预览全文效果。
-
-### 4. 复制到公众号
-
-点击 **「复制到公众号」**：图片转 Base64、链接在剪贴板中输出为 **「文案 地址」** 纯文本，列表与引用已针对公众号排版做过兼容。
-
----
-
-## 💻 代码块
-
-\`\`\`javascript
-// 图片压缩后写入 IndexedDB，正文里用短链引用
-const compressedBlob = await imageCompressor.compress(file);
-await imageStore.saveImage(imageId, compressedBlob);
-const markdown = \`![说明](img://\${imageId})\`;
-\`\`\`
-
-## 📖 引用
-
-> 第一段引用：左侧 \`>\` 写作，右侧即时预览。
->
-> 第二段引用：空行写 \`>\` 再写内容，即可在同一块引用里分段。
-
-## 📊 表格
-
-| 能力 | 状态 | 说明 |
-|------|:----:|------|
-| 表格边框 | ✅ | 预览与复制均带线框 |
-| 奇偶行底色 | ✅ | 偶数行浅色底，便于扫读 |
-| Markdown 链接 | ✅ | 预览可点；复制为「文案 url」 |
-
----
-
-**链接示例**（预览可点）：[项目主页](https://github.com/zhijunio/article-tools)
-
-**💡 提示**：切换主题看排版差异；粘贴大图试压缩；清空本地存储前可先导出 Markdown。
-
-**🌟 开源**：若觉得有用，欢迎 [在 GitHub 点 Star](https://github.com/zhijunio/article-tools)。`;
+  let sampleMdPromise = null;
+  function loadSampleMd() {
+    if (sampleMdPromise) return sampleMdPromise;
+    sampleMdPromise = (async () => {
+      try {
+        const url = new URL('sample.md', window.location.href);
+        const res = await fetch(url.toString(), { cache: 'no-cache' });
+        if (res.ok) {
+          const text = await res.text();
+          if (isValidMdContent(text)) return text;
+        }
+      } catch (e) {
+        console.warn('加载 sample.md 失败', e);
+      }
+      const embedded = document.getElementById('editor-sample-md');
+      if (embedded && isValidMdContent(embedded.textContent)) {
+        return embedded.textContent;
+      }
+      return SAMPLE_MD_FALLBACK;
+    })();
+    return sampleMdPromise;
+  }
 
   // ============ 渲染预览 ============
   async function renderPreview() {
@@ -405,9 +383,8 @@ const markdown = \`![说明](img://\${imageId})\`;
   function updateMeta() {
     const text = (state.md || '').replace(/[#*_`~\->[\]()]/g, '');
     const chars = text.replace(/\s/g, '').length;
-    const readMin = Math.max(1, Math.round(chars / 300));
-    document.getElementById('meta-chars').textContent = chars + ' 字';
-    document.getElementById('meta-read').textContent = '约 ' + readMin + ' 分钟';
+    const el = document.getElementById('meta-chars');
+    if (el) el.textContent = chars + ' 字';
   }
 
   // ============ Toast ============
@@ -547,6 +524,7 @@ const markdown = \`![说明](img://\${imageId})\`;
 
     let locked = false;
     const sync = (from, to) => {
+      if (!state.scrollSyncEnabled) return;
       if (locked) return;
       locked = true;
       syncScrollRatio(from, to);
@@ -557,6 +535,19 @@ const markdown = \`![说明](img://\${imageId})\`;
 
     editor.addEventListener('scroll', () => sync(editor, preview), { passive: true });
     preview.addEventListener('scroll', () => sync(preview, editor), { passive: true });
+  }
+
+  function updateScrollSyncUI() {
+    const track = document.getElementById('sync-scroll-track');
+    const btn = document.getElementById('sync-scroll-switch');
+    if (track) track.classList.toggle('on', state.scrollSyncEnabled);
+    if (btn) btn.setAttribute('aria-pressed', String(state.scrollSyncEnabled));
+  }
+
+  function toggleScrollSync() {
+    state.scrollSyncEnabled = !state.scrollSyncEnabled;
+    updateScrollSyncUI();
+    save();
   }
 
   function setSettingsPaneCollapsed(collapsed) {
@@ -1486,14 +1477,23 @@ const markdown = \`![说明](img://\${imageId})\`;
     document.getElementById('btn-rand-style').addEventListener('click', randomizeStyle);
     document.getElementById('btn-reset').addEventListener('click', () => {
       if (confirm('重置为暖棕书卷主题？自定义主题不会被删除。')) {
-        applyTheme('claude');
-        toast('已重置');
+        localStorage.clear();
+        location.reload();
       }
     });
+    document.getElementById('sync-scroll-switch').addEventListener('click', () => {
+      toggleScrollSync();
+    });
     document.getElementById('btn-sample').addEventListener('click', () => {
-      document.getElementById('editor').value = SAMPLE_MD;
-      state.md = SAMPLE_MD;
-      renderPreview();
+      void (async () => {
+        sampleMdPromise = null;
+        const md = await loadSampleMd();
+        const ed = document.getElementById('editor');
+        ed.value = md;
+        state.md = md;
+        await renderPreview();
+        toast('已填入示例 Markdown');
+      })();
     });
     document.getElementById('import-file').addEventListener('change', e => {
       const f = e.target.files[0];
@@ -1514,8 +1514,12 @@ const markdown = \`![说明](img://\${imageId})\`;
       console.warn('IndexedDB 初始化失败', e);
     }
 
-    const hadData = load();
-    if (!state.md) state.md = SAMPLE_MD;
+    load();
+    // 如果没有数据或数据无效，使用示例文章（sample.md）
+    const hasValidMd = isValidMdContent(state.md);
+    if (!hasValidMd) {
+      state.md = await loadSampleMd();
+    }
 
     const ed = document.getElementById('editor');
     ed.value = state.md;
@@ -1545,12 +1549,13 @@ const markdown = \`![说明](img://\${imageId})\`;
 
     bindTopbar();
     bindScrollSync();
+    updateScrollSyncUI();
     buildSettingsPanel();
     updateThemeSelect();
     setSettingsPaneCollapsed(state.settingsPaneCollapsed);
     await renderPreview();
 
-    if (!hadData) toast('欢迎！已加载示例内容，开始编辑吧');
+    if (!hasValidMd) toast('欢迎！已加载示例内容，开始编辑吧');
   }
 
   if (document.readyState === 'loading') {

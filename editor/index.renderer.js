@@ -25,6 +25,19 @@
     return String(tpl).replace(/\{(\w+)\}/g, (_, k) => (vars[k] !== undefined ? vars[k] : ''));
   }
 
+  function escapeAttr(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;');
+  }
+  function escapeHtmlText(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   // ============ 找预设 ============
   function find(list, id) {
     return list.find(p => p.id === id) || list[0];
@@ -236,9 +249,10 @@
     // --- 图片 ---
     renderer.image = function (href, title, text) {
       const preset = buildImg(settings.img);
-      const imgHtml = `<img src="${href}" alt="${text || ''}" style="${preset.imgStyle}">`;
+      const rawAlt = text || '';
+      const imgHtml = `<img src="${escapeAttr(href)}" alt="${escapeAttr(rawAlt)}" style="${preset.imgStyle}">`;
       if (text) {
-        return `<figure style="margin:0;">${imgHtml}<figcaption style="${preset.capStyle}">${text}</figcaption></figure>`;
+        return `<figure style="margin:0;">${imgHtml}<figcaption style="${preset.capStyle}">${escapeHtmlText(text)}</figcaption></figure>`;
       }
       return imgHtml;
     };

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head>
   <meta charset="utf-8">
-  <title>公众号排版器</title>
+  <title>公众号排版</title>
   <meta name="viewport" content="width=1280">
   <link rel="stylesheet" href="index.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css">
@@ -14,12 +14,15 @@
   <div class="app">
     <!-- 顶部工具栏 -->
     <header class="topbar">
+      <div class="topbar-left">
       <a class="home-link" href="../index.html" title="工具箱首页" aria-label="回到首页">
         <svg class="ico" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1.5 6.5L7.5 1.5L13.5 6.5V13.5H9.5V9.5H5.5V13.5H1.5V6.5Z"></path>
         </svg>
       </a>
-      <div class="brand"><span>公众号排版器</span></div>
+      <div class="brand" title="公众号排版">
+        <span class="brand-mark">公众号排版</span>
+      </div>
       <span class="divider"></span>
 
       <div class="select-theme">
@@ -43,11 +46,14 @@
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
         重置
       </button>
+      </div>
 
       <span class="spacer"></span>
 
-      <span class="meta" id="meta-chars">0 字</span>
-      <span class="meta" id="meta-read">约 1 分钟</span>
+      <button type="button" class="sync-switch-btn" id="sync-scroll-switch" title="编辑区与预览区滚动同步" aria-pressed="true">
+        <span class="sync-switch-label">滚动同步</span>
+        <span class="sync-switch-track" id="sync-scroll-track"><span class="sync-switch-thumb"></span></span>
+      </button>
       <span class="divider"></span>
 
       <button class="btn" id="btn-copy-html">
@@ -65,8 +71,9 @@
       <!-- 左：编辑器 -->
       <section class="pane">
         <div class="pane-head">
-          <span>编辑区</span>
-          <span style="text-transform:none; letter-spacing:0; color:var(--ink-faint); font-weight:400; font-size:11px;">粘贴或输入 Markdown 内容</span>
+          <span>编辑区域</span>
+          <span class="pane-head-hint">粘贴或输入 Markdown 内容</span>
+          <span class="meta" id="meta-chars">0 字</span>
         </div>
         <div class="pane-body" style="overflow:hidden;">
           <textarea id="editor" spellcheck="false" placeholder="# 在这里写 Markdown..."></textarea>
@@ -76,7 +83,7 @@
       <!-- 中：预览 -->
       <section class="pane preview-pane">
         <div class="pane-head">
-          <span>预览区（手机预览 · 375px）</span>
+          <span>预览区域（手机预览 · 375px）</span>
         </div>
         <div class="pane-body" id="preview-scroll-root">
           <div class="preview-wrap">
@@ -118,9 +125,9 @@
   <!-- Toast -->
   <div id="toast" class="toast">提示</div>
 
-  <script src="index.presets.js"></script>
-  <script src="index.renderer.js"></script>
-  <script src="index.js"></script>
+  <script src="index.presets.js?v=20260421"></script>
+  <script src="index.renderer.js?v=20260421"></script>
+  <script src="index.js?v=20260421"></script>
 
 
 </body></html>
