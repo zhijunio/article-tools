@@ -13,10 +13,6 @@
 | 🎨 公众号排版工作室 | `/studio/` | 12 种专业风格 + 5 种图片角色，扩展 Markdown 语法 |
 | 📱 二维码工具 | `/qrcode/` | 生成与解析二维码，支持文本、链接 |
 
-![封面生成器](docs/cover.png)
-![Markdown 排版器](docs/md.png)
-![公众号排版工作室](docs/studio.png)
-
 ## 快速开始
 
 ### 本地开发
@@ -52,7 +48,7 @@ npx serve .
 
 **路径：** `/cover/index.html`
 
----
+![封面生成器](docs/cover.png)
 
 ### Markdown 排版器
 
@@ -70,7 +66,7 @@ npx serve .
 
 **详细说明：** [md/README.md](md/README.md)
 
----
+![Markdown 排版器](docs/md.png)
 
 ### 公众号排版工作室（V6）
 
@@ -103,7 +99,8 @@ npx serve .
 
 **详细说明：** [studio/README.md](studio/README.md)
 
----
+
+![公众号排版工作室](docs/studio.png)
 
 ### 二维码工具
 
@@ -115,8 +112,6 @@ npx serve .
 - 图片（上传生成）
 
 **路径：** `/qrcode/index.html`
-
----
 
 ## 技术特点
 
