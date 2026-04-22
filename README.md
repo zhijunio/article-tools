@@ -13,6 +13,10 @@
 | 🎨 公众号排版工作室 | `/studio/` | 12 种专业风格 + 5 种图片角色，扩展 Markdown 语法 |
 | 📱 二维码工具 | `/qrcode/` | 生成与解析二维码，支持文本、链接 |
 
+![封面生成器](docs/cover.png)
+![Markdown 排版器](docs/md.png)
+![公众号排版工作室](docs/studio.png)
+
 ## 快速开始
 
 ### 本地开发
