@@ -26,8 +26,8 @@
       <span class="divider"></span>
 
       <div class="select-theme">
-        <span style="color:var(--ink-faint); font-size:11.5px;">主题</span>
-        <select id="theme-select"></select>
+        <span class="select-theme-label">主题</span>
+        <select id="theme-select" aria-describedby="theme-desc"></select>
       </div>
 
       <button class="btn ghost" id="btn-rand-color" title="随机色系">
@@ -83,7 +83,8 @@
       <!-- 中：预览 -->
       <section class="pane preview-pane">
         <div class="pane-head">
-          <span>预览区域（手机预览 · 375px）</span>
+          <span>预览区域</span>
+          <span id="theme-desc" class="theme-desc-preview" aria-live="polite"></span>
         </div>
         <div class="pane-body" id="preview-scroll-root">
           <div class="preview-wrap">

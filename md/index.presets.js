@@ -159,13 +159,12 @@ window.PRESETS = {
 
   // ============ 链接 a ============
   a: [
-    { id: 'underline',   name: '下划线', style: 'color:{c}; text-decoration:underline; text-underline-offset:3px;' },
+    { id: 'underline',   name: '下划线', style: 'color:{c}; text-decoration-line:underline; text-decoration-style:solid; text-decoration-thickness:1px; text-underline-offset:3px;' },
     { id: 'bold',        name: '加粗无下划线', style: 'color:{c}; text-decoration:none; font-weight:600;' },
     { id: 'dashed',      name: '虚下划线', style: 'color:{c}; text-decoration:none; border-bottom:1px dashed {c}; padding-bottom:1px;' },
     { id: 'highlight',   name: '荧光背景', style: 'color:{c}; text-decoration:none; background:{cbg}; padding:1px 3px; border-radius:2px;' },
     { id: 'plain',       name: '无装饰', style: 'color:{c}; text-decoration:none;' },
-    { id: 'arrow',       name: '带箭头', style: 'color:{c}; text-decoration:underline; text-underline-offset:3px;', suffix: ' ↗' },
-    { id: 'double',      name: '双下划线', style: 'color:{c}; text-decoration:underline double; text-underline-offset:3px;' },
+    { id: 'arrow',       name: '带箭头', style: 'color:{c}; text-decoration-line:underline; text-decoration-style:solid; text-decoration-thickness:1px; text-underline-offset:3px;', suffix: ' ↗' },
   ],
 
   // ============ 图片 img ============
@@ -210,11 +209,18 @@ window.PRESETS = {
 };
 
 /* ============================================================
-   预设主题：5 套
+   预设主题：5 款（公众号常见调性）
+   · 暖棕书卷 — 文化/深度/杂志感，衬线
+   · 黑白极简 — 公告/专业/信息密度，无衬线
+   · 科技蓝调 — 互联网/产品/SaaS
+   · 琥珀橙调 — 情感/生活/故事，偏暖活泼
+   · 正红宣调 — 节庆/党建/品牌红，正红+柔底
+   键名：shujuan · jijian · keji · hupo · zhenghong
    ============================================================ */
 window.THEMES = {
-  claude: {
+  shujuan: {
     name: '暖棕书卷',
+    desc: '读书、专栏、文化类长文；衬线暖棕，纸感柔和',
     global: {
       bg: '#FFFFFF',
       ink: '#3D2E20',
@@ -228,7 +234,7 @@ window.THEMES = {
     h3: { preset: 'underline', color: '#C96442', fontSize: 17 },
     h4: { preset: 'caret', color: '#3D2E20', fontSize: 16 },
     p:  { preset: 'normal', color: '#3D2E20', fontSize: 16, lineHeight: 1.85, letterSpacing: 0.3 },
-    blockquote: { preset: 'leftbar-bg', color: '#C96442', textColor: '#6B5D4F', bgColor: '#FAF3EB', fontSize: 15 },
+    blockquote: { preset: 'leftbar-bg', textColor: '#000000', bgColor: '#FFFFFF', fontSize: 15 },
     pre: { preset: 'warm-paper' },
     code: { preset: 'pill-soft', color: '#C96442', bgColor: '#F5E3D7' },
     ul: { preset: 'diamond', color: '#C96442' },
@@ -237,12 +243,13 @@ window.THEMES = {
     img: { preset: 'rounded' },
     hr: { preset: 'diamond', color: '#C96442' },
     table: { preset: 'softbg', color: '#C96442', bgColor: '#FAF3EB' },
-    bold: { color: '#3D2E20' },
-    italic: { color: '#6B5D4F' },
+    bold: { color: '#C96442' },
+    italic: { color: '#5C4A3A' },
   },
 
-  minimal: {
+  jijian: {
     name: '黑白极简',
+    desc: '通知、声明、政策与商务；高对比黑白，信息优先',
     global: {
       bg: '#FFFFFF',
       ink: '#1A1A1A',
@@ -256,7 +263,7 @@ window.THEMES = {
     h3: { preset: 'plain', color: '#1A1A1A', fontSize: 17 },
     h4: { preset: 'caps', color: '#555555', fontSize: 13 },
     p:  { preset: 'normal', color: '#1A1A1A', fontSize: 16, lineHeight: 1.8, letterSpacing: 0.2 },
-    blockquote: { preset: 'leftbar', color: '#1A1A1A', textColor: '#555555', bgColor: '#FAFAFA', fontSize: 15 },
+    blockquote: { preset: 'leftbar-bg', textColor: '#000000', bgColor: '#FFFFFF', fontSize: 15 },
     pre: { preset: 'subtle-border' },
     code: { preset: 'grey-ink', color: '#1A1A1A', bgColor: '#F0F0F0' },
     ul: { preset: 'dash', color: '#1A1A1A' },
@@ -265,40 +272,13 @@ window.THEMES = {
     img: { preset: 'plain' },
     hr: { preset: 'thin', color: '#CCCCCC' },
     table: { preset: 'borderless', color: '#1A1A1A', bgColor: '#FAFAFA' },
-    bold: { color: '#000000' },
-    italic: { color: '#555555' },
+    bold: { color: '#1A1A1A' },
+    italic: { color: '#4A4A4A' },
   },
 
-  warm: {
-    name: '琥珀橙调',
-    global: {
-      bg: '#FFFFFF',
-      ink: '#5A3A16',
-      brand: '#E08A2E',
-      brandSoft: '#FCE7C7',
-      fontFamily: 'serif-zh',
-      maxWidth: 335,
-    },
-    h1: { preset: 'cardfill', color: '#E08A2E', fontSize: 21 },
-    h2: { preset: 'pillsoft', color: '#E08A2E', fontSize: 18 },
-    h3: { preset: 'wave', color: '#E08A2E', fontSize: 17 },
-    h4: { preset: 'dot', color: '#5A3A16', fontSize: 16 },
-    p:  { preset: 'loose', color: '#5A3A16', fontSize: 16, lineHeight: 1.9, letterSpacing: 0.4 },
-    blockquote: { preset: 'quote-mark', color: '#E08A2E', textColor: '#8A5A22', bgColor: '#FFF1DB', fontSize: 15 },
-    pre: { preset: 'warm-paper' },
-    code: { preset: 'mark', color: '#E08A2E', bgColor: '#FCE7C7' },
-    ul: { preset: 'flower', color: '#E08A2E' },
-    ol: { preset: 'circled', color: '#E08A2E' },
-    a: { preset: 'highlight', color: '#E08A2E', bgColor: '#FCE7C7' },
-    img: { preset: 'polaroid' },
-    hr: { preset: 'leaves', color: '#E08A2E' },
-    table: { preset: 'softbg', color: '#E08A2E', bgColor: '#FFF1DB' },
-    bold: { color: '#C46F14' },
-    italic: { color: '#8A5A22' },
-  },
-
-  tech: {
+  keji: {
     name: '科技蓝调',
+    desc: '产品更新、教程、互联网与开发向内容',
     global: {
       bg: '#FFFFFF',
       ink: '#1E293B',
@@ -312,7 +292,7 @@ window.THEMES = {
     h3: { preset: 'arrow', color: '#2563EB', fontSize: 17 },
     h4: { preset: 'square', color: '#1E293B', fontSize: 16 },
     p:  { preset: 'normal', color: '#1E293B', fontSize: 16, lineHeight: 1.8, letterSpacing: 0.2 },
-    blockquote: { preset: 'notice', color: '#2563EB', textColor: '#1E3A8A', bgColor: '#DBEAFE', fontSize: 15 },
+    blockquote: { preset: 'notice', textColor: '#000000', bgColor: '#FFFFFF', fontSize: 15 },
     pre: { preset: 'github-light' },
     code: { preset: 'pill-soft', color: '#2563EB', bgColor: '#DBEAFE' },
     ul: { preset: 'arrow', color: '#2563EB' },
@@ -321,63 +301,65 @@ window.THEMES = {
     img: { preset: 'shadow' },
     hr: { preset: 'gradient', color: '#2563EB' },
     table: { preset: 'zebra', color: '#2563EB', bgColor: '#F1F5F9' },
-    bold: { color: '#1E293B' },
-    italic: { color: '#475569' },
+    bold: { color: '#2563EB' },
+    italic: { color: '#334155' },
   },
 
-  mint: {
-    name: '薄荷青绿',
+  hupo: {
+    name: '琥珀橙调',
+    desc: '生活、情感、故事与亲子；暖橙活泼，配图友好',
     global: {
       bg: '#FFFFFF',
-      ink: '#244B45',
-      brand: '#35B89A',
-      brandSoft: '#D9F7EF',
-      fontFamily: 'rounded',
+      ink: '#5A3A16',
+      brand: '#E08A2E',
+      brandSoft: '#FCE7C7',
+      fontFamily: 'serif-zh',
       maxWidth: 335,
     },
-    h1: { preset: 'softcard', color: '#35B89A', fontSize: 22 },
-    h2: { preset: 'pillsoft', color: '#2A8F7A', fontSize: 19 },
-    h3: { preset: 'leftbar', color: '#35B89A', fontSize: 17 },
-    h4: { preset: 'dot', color: '#244B45', fontSize: 16 },
-    p:  { preset: 'normal', color: '#244B45', fontSize: 16, lineHeight: 1.85, letterSpacing: 0.25 },
-    blockquote: { preset: 'soft', color: '#35B89A', textColor: '#2A6A60', bgColor: '#E8FBF5', fontSize: 15 },
-    pre: { preset: 'subtle-border' },
-    code: { preset: 'pill-soft', color: '#2A8F7A', bgColor: '#D9F7EF' },
-    ul: { preset: 'check', color: '#35B89A' },
-    ol: { preset: 'circled', color: '#35B89A' },
-    a: { preset: 'highlight', color: '#2A8F7A', bgColor: '#D9F7EF' },
-    img: { preset: 'rounded' },
-    hr: { preset: 'gradient', color: '#35B89A' },
-    table: { preset: 'softbg', color: '#2A8F7A', bgColor: '#E8FBF5' },
-    bold: { color: '#1F5C52' },
-    italic: { color: '#4F7F77' },
-  },
-
-  retro: {
-    name: '酒红复古',
-    global: {
-      bg: '#FFFFFF',
-      ink: '#2C2C2C',
-      brand: '#F25C54',
-      brandSoft: '#FDEBEA',
-      fontFamily: 'fangsong',
-      maxWidth: 335,
-    },
-    h1: { preset: 'doubleline', color: '#F25C54', fontSize: 21 },
-    h2: { preset: 'bracket', color: '#F25C54', fontSize: 18 },
-    h3: { preset: 'emojibook', color: '#F25C54', fontSize: 17 },
-    h4: { preset: 'italic', color: '#F25C54', fontSize: 16 },
-    p:  { preset: 'indent', color: '#2C2C2C', fontSize: 16, lineHeight: 1.95, letterSpacing: 0.5 },
-    blockquote: { preset: 'center', color: '#F25C54', textColor: '#2C2C2C', bgColor: '#FDEBEA', fontSize: 15 },
+    h1: { preset: 'cardfill', color: '#E08A2E', fontSize: 21 },
+    h2: { preset: 'pillsoft', color: '#E08A2E', fontSize: 18 },
+    h3: { preset: 'wave', color: '#E08A2E', fontSize: 17 },
+    h4: { preset: 'dot', color: '#5A3A16', fontSize: 16 },
+    p:  { preset: 'loose', color: '#5A3A16', fontSize: 16, lineHeight: 1.9, letterSpacing: 0.4 },
+    blockquote: { preset: 'quote-mark', textColor: '#000000', bgColor: '#FFFFFF', fontSize: 15 },
     pre: { preset: 'warm-paper' },
-    code: { preset: 'outlined', color: '#F25C54', bgColor: '#FDEBEA' },
-    ul: { preset: 'heart', color: '#F25C54' },
-    ol: { preset: 'chinese', color: '#F25C54' },
-    a: { preset: 'dashed', color: '#F25C54' },
+    code: { preset: 'mark', color: '#E08A2E', bgColor: '#FCE7C7' },
+    ul: { preset: 'flower', color: '#E08A2E' },
+    ol: { preset: 'circled', color: '#E08A2E' },
+    a: { preset: 'highlight', color: '#E08A2E', bgColor: '#FCE7C7' },
+    img: { preset: 'polaroid' },
+    hr: { preset: 'leaves', color: '#E08A2E' },
+    table: { preset: 'softbg', color: '#E08A2E', bgColor: '#FFF1DB' },
+    bold: { color: '#E08A2E' },
+    italic: { color: '#6B4A1E' },
+  },
+
+  zhenghong: {
+    name: '正红宣调',
+    desc: '节庆、党建、品牌与重要公告；正红醒目，庄重感',
+    global: {
+      bg: '#FFFFFF',
+      ink: '#5C0F0F',
+      brand: '#C41E3A',
+      brandSoft: '#FCE8E8',
+      fontFamily: 'serif-zh',
+      maxWidth: 335,
+    },
+    h1: { preset: 'doubleline', color: '#C41E3A', fontSize: 22 },
+    h2: { preset: 'leftbar', color: '#C41E3A', fontSize: 19 },
+    h3: { preset: 'underline', color: '#C41E3A', fontSize: 17 },
+    h4: { preset: 'bracket', color: '#7F1D1D', fontSize: 16 },
+    p:  { preset: 'normal', color: '#5C0F0F', fontSize: 16, lineHeight: 1.85, letterSpacing: 0.3 },
+    blockquote: { preset: 'leftbar-bg', textColor: '#000000', bgColor: '#FFFFFF', fontSize: 15 },
+    pre: { preset: 'warm-paper' },
+    code: { preset: 'pill-soft', color: '#C41E3A', bgColor: '#FCE8E8' },
+    ul: { preset: 'diamond', color: '#C41E3A' },
+    ol: { preset: 'circled', color: '#C41E3A' },
+    a: { preset: 'dashed', color: '#C41E3A' },
     img: { preset: 'bordered' },
-    hr: { preset: 'flower', color: '#F25C54' },
-    table: { preset: 'outerframe', color: '#F25C54', bgColor: '#FDEBEA' },
-    bold: { color: '#F25C54' },
-    italic: { color: '#888888' },
+    hr: { preset: 'gradient', color: '#C41E3A' },
+    table: { preset: 'softbg', color: '#C41E3A', bgColor: '#FCE8E8' },
+    bold: { color: '#C41E3A' },
+    italic: { color: '#6B2424' },
   },
 };

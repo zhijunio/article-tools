@@ -40,6 +40,36 @@
       .replace(/>/g, '&gt;');
   }
 
+  /**
+   * marked 9+ 传入的 codespan 文本已带 HTML 实体（如 ' → &#39;、< → &lt;）。
+   * 若直接对 & 再转义会得到 &amp;#39;，页面上会显示成字面量「&#39;」等错误。
+   * 先还原为真实字符，再按文本节点做安全转义。
+   *
+   * 安全说明：此处 t.innerHTML = str 是安全的 — str 来自 marked 解析器的 codespan 输出，
+   * 仅含 HTML 实体而非恶意脚本；且解码后还会经 escapeCodeTextContent() 再次转义。
+   */
+  function decodeMarkedInlineCode(s) {
+    const str = String(s ?? '');
+    if (typeof document !== 'undefined') {
+      const t = document.createElement('textarea');
+      t.innerHTML = str;  // 安全：仅解码 HTML 实体，非用户输入
+      return t.value;
+    }
+    return str
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;|&#(?:0*39|x27);/gi, "'")
+      .replace(/&amp;/g, '&');
+  }
+
+  function escapeCodeTextContent(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   // ============ 找预设 ============
   function find(list, id) {
     return list.find(p => p.id === id) || list[0];
@@ -49,13 +79,12 @@
   function buildHeading(level, cfg, settings) {
     const list = P['h' + level] || P.h2;
     const preset = find(list, cfg.preset);
-    const vars = {
+    const style = fillStyle(preset.style, {
       fs: cfg.fontSize,
       c: cfg.color,
       cbg: settings.global.brandSoft,
-    };
-    let style = fillStyle(preset.style, vars);
-    return { preset, style, vars };
+    });
+    return { preset, style };
   }
 
   function buildParagraph(cfg) {
@@ -69,12 +98,13 @@
     return fillStyle(preset.style, vars);
   }
 
-  function buildBlockquote(cfg) {
+  function buildBlockquote(cfg, brand) {
     const preset = find(P.blockquote, cfg.preset);
+    // 引用正文与背景固定黑字白底；装饰色与主题主色 global.brand 一致
     const vars = {
-      c: cfg.color,
-      tc: cfg.textColor,
-      cbg: cfg.bgColor,
+      c: brand,
+      tc: '#000000',
+      cbg: '#FFFFFF',
       fs: cfg.fontSize,
     };
     return { preset, style: fillStyle(preset.style, vars) };
@@ -134,23 +164,31 @@
       if (preset.prefix) content = preset.prefix + content;
       if (preset.suffix) content = content + preset.suffix;
 
-      if (preset.badge) {
-        const badgeStyle = `display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:30px; border-radius:50%; background:${cfg.color}; color:#fff; font-size:15px; font-weight:700; flex-shrink:0;`;
+      // 徽章类预设：badge(圆形) / badgeSq(方形) / numPrefix(数字前缀)
+      const getBadgeStyle = (isRound) => {
+        const size = isRound ? 30 : 24;
+        const fontSize = isRound ? 15 : 13;
+        return `display:inline-flex; align-items:center; justify-content:center; min-width:${size}px; height:${size}px; border-radius:${isRound ? '50%' : '4px'}; background:${cfg.color}; color:#fff; font-size:${fontSize}px; font-weight:700; flex-shrink:0;`;
+      };
+
+      const incrementCount = () => {
         if (!renderer._hCount) renderer._hCount = {};
         renderer._hCount[lvl] = (renderer._hCount[lvl] || 0) + 1;
-        return `<h${lvl} style="${style}"><span style="${badgeStyle}">${renderer._hCount[lvl]}</span><span>${text}</span></h${lvl}>`;
+        return renderer._hCount[lvl];
+      };
+
+      if (preset.badge) {
+        const n = incrementCount();
+        return `<h${lvl} style="${style}"><span style="${getBadgeStyle(true)}">${n}</span><span>${text}</span></h${lvl}>`;
       }
       if (preset.badgeSq) {
-        const badgeStyle = `display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:24px; border-radius:4px; background:${cfg.color}; color:#fff; font-size:13px; font-weight:700; flex-shrink:0;`;
-        if (!renderer._hCount) renderer._hCount = {};
-        renderer._hCount[lvl] = (renderer._hCount[lvl] || 0) + 1;
-        return `<h${lvl} style="${style}"><span style="${badgeStyle}">${renderer._hCount[lvl]}</span><span>${text}</span></h${lvl}>`;
+        const n = incrementCount();
+        return `<h${lvl} style="${style}"><span style="${getBadgeStyle(false)}">${n}</span><span>${text}</span></h${lvl}>`;
       }
       if (preset.numPrefix) {
-        if (!renderer._hCount) renderer._hCount = {};
-        renderer._hCount[lvl] = (renderer._hCount[lvl] || 0) + 1;
-        const n = renderer._hCount[lvl];
-        return `<h${lvl} style="${style}"><span style="color:${cfg.color}; margin-right:8px; font-family:Georgia,serif;">${String(n).padStart(2,'0')}</span>${content}</h${lvl}>`;
+        const n = incrementCount();
+        const prefixStyle = `color:${cfg.color}; margin-right:8px; font-family:Georgia,serif;`;
+        return `<h${lvl} style="${style}"><span style="${prefixStyle}">${String(n).padStart(2,'0')}</span>${content}</h${lvl}>`;
       }
 
       return `<h${lvl} style="${style}">${content}</h${lvl}>`;
@@ -164,15 +202,16 @@
 
     // --- 引用 ---
     renderer.blockquote = function (quote) {
-      const { preset, style } = buildBlockquote(settings.blockquote);
-      const cfg = settings.blockquote;
+      const brand = g.brand;
+      const { preset, style } = buildBlockquote(settings.blockquote, brand);
 
       let inner = quote;
+      // 注：微信公众号不支持 position:absolute，改用 float:left + 负 margin 实现装饰效果
       if (preset.quotemark) {
-        inner = `<span style="position:absolute; left:10px; top:6px; font-size:32px; line-height:1; color:${cfg.color}; font-family:Georgia,serif;">"</span>${quote}`;
+        inner = `<span style="float:left; margin-left:-28px; margin-top:-6px; font-size:32px; line-height:1; color:${brand}; font-family:Georgia,serif; pointer-events:none;">"</span>${quote}`;
       }
       if (preset.notice) {
-        inner = `<span style="position:absolute; left:12px; top:12px; font-size:15px; color:${cfg.color};">💡</span>${quote}`;
+        inner = `<span style="float:left; margin-left:-28px; margin-top:-2px; font-size:15px; line-height:1; color:${brand}; pointer-events:none;">💡</span>${quote}`;
       }
 
       // 去掉嵌套 p 的 margin
@@ -212,7 +251,8 @@
     // --- 行内代码 ---
     renderer.codespan = function (code) {
       const style = buildCode(settings.code);
-      const esc = String(code).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const raw = decodeMarkedInlineCode(code);
+      const esc = escapeCodeTextContent(raw);
       return `<code style="${style}">${esc}</code>`;
     };
 

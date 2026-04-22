@@ -265,7 +265,7 @@
 
   // ============ 默认设置 ============
   function defaultSettings() {
-    return JSON.parse(JSON.stringify(THEMES.claude));
+    return JSON.parse(JSON.stringify(THEMES.shujuan));
   }
 
   // ============ State ============
@@ -273,7 +273,7 @@
     md: '',
     settings: defaultSettings(),
     customThemes: {}, // { id: {name, settings} }
-    currentThemeKey: 'claude', // 'claude' | 'minimal' | ... or 'custom:id'
+    currentThemeKey: 'shujuan', // shujuan | jijian | keji | hupo | zhenghong | custom:id
     settingsPaneCollapsed: false,
     scrollSyncEnabled: true,
   };
@@ -311,11 +311,28 @@
       if (parsed.settings) state.settings = parsed.settings;
       if (parsed.customThemes) state.customThemes = parsed.customThemes;
       if (parsed.currentThemeKey) state.currentThemeKey = parsed.currentThemeKey;
+      // mint/retro 已移除 → 转为自定义主题存档，避免重复创建先检查是否已存在
+      if (state.currentThemeKey === 'mint' || state.currentThemeKey === 'retro') {
+        const archiveName = state.currentThemeKey === 'mint' ? '薄荷青绿（已存档）' : '酒红复古（已存档）';
+        const existingId = Object.keys(state.customThemes).find(id => state.customThemes[id].name === archiveName);
+        if (existingId) {
+          state.currentThemeKey = 'custom:' + existingId;
+        } else {
+          const id = 'legacy_' + Date.now();
+          state.customThemes[id] = {
+            name: archiveName,
+            settings: JSON.parse(JSON.stringify(state.settings)),
+          };
+          state.currentThemeKey = 'custom:' + id;
+        }
+        save();
+      }
       if (typeof parsed.settingsPaneCollapsed === 'boolean') state.settingsPaneCollapsed = parsed.settingsPaneCollapsed;
       if (typeof parsed.scrollSyncEnabled === 'boolean') state.scrollSyncEnabled = parsed.scrollSyncEnabled;
       if (state.settings && state.settings.global && state.settings.global.maxWidth == null) {
         state.settings.global.maxWidth = 335;
       }
+      normalizeBlockquoteColors();
       return true;
     } catch (e) { return false; }
   }
@@ -609,9 +626,18 @@
 
   // ============ 主题切换 ============
   function syncBoldColorToBrand() {
-    if (state.settings && state.settings.global && state.settings.bold) {
-      state.settings.bold.color = state.settings.global.brand;
+    if (state.settings?.bold) {
+      state.settings.bold.color = state.settings.global?.brand;
     }
+  }
+
+  /** 引用正文/背景固定为黑字白底，同步到 state 便于导出 JSON 一致 */
+  function normalizeBlockquoteColors() {
+    if (!state.settings?.blockquote) return;
+    const bq = state.settings.blockquote;
+    bq.textColor = '#000000';
+    bq.bgColor = '#FFFFFF';
+    delete bq.color;
   }
 
   function applyTheme(key) {
@@ -625,22 +651,37 @@
       state.settings = JSON.parse(JSON.stringify(THEMES[key]));
     }
     syncBoldColorToBrand();
+    normalizeBlockquoteColors();
     renderPreview();
     buildSettingsPanel();
     updateThemeSelect();
   }
 
+  function updateThemeDescription() {
+    const el = document.getElementById('theme-desc');
+    if (!el) return;
+    if (state.currentThemeKey.startsWith('custom:')) {
+      el.textContent = '自定义 · 侧栏底部可管理、导出 JSON';
+      return;
+    }
+    const t = THEMES[state.currentThemeKey];
+    el.textContent = t?.desc ?? '';
+  }
+
   function updateThemeSelect() {
     const sel = document.getElementById('theme-select');
     sel.innerHTML = '';
-    // 预设
+
+    // 预设主题
     Object.entries(THEMES).forEach(([k, t]) => {
       const opt = document.createElement('option');
       opt.value = k;
       opt.textContent = t.name;
+      opt.title = t.desc ? `${t.name}：${t.desc}` : t.name;
       sel.appendChild(opt);
     });
-    // 自定义
+
+    // 自定义主题
     const entries = Object.entries(state.customThemes);
     if (entries.length) {
       const sep = document.createElement('option');
@@ -651,10 +692,12 @@
         const opt = document.createElement('option');
         opt.value = 'custom:' + id;
         opt.textContent = t.name;
+        opt.title = t.name;
         sel.appendChild(opt);
       });
     }
     sel.value = state.currentThemeKey;
+    updateThemeDescription();
   }
 
   // ============ 保存自定义主题 ============
@@ -673,8 +716,8 @@
   function deleteCustomTheme(id) {
     delete state.customThemes[id];
     if (state.currentThemeKey === 'custom:' + id) {
-      state.currentThemeKey = 'claude';
-      applyTheme('claude');
+      state.currentThemeKey = 'shujuan';
+      applyTheme('shujuan');
     }
     save();
     updateThemeSelect();
@@ -754,6 +797,7 @@
           state.settings = JSON.parse(JSON.stringify(data.currentSettings));
           state.currentThemeKey = 'custom:' + id;
           syncBoldColorToBrand();
+          normalizeBlockquoteColors();
         }
         save();
         renderPreview();
@@ -1056,28 +1100,33 @@
   function randomizeColors() {
     const pick = HUE_SETS[Math.floor(Math.random() * HUE_SETS.length)];
     const [brand, brandSoft, , ink] = pick;
-    state.settings.global.brand = brand;
-    state.settings.global.brandSoft = brandSoft;
-    state.settings.global.ink = ink;
+    const g = state.settings.global;
+    g.brand = brand;
+    g.brandSoft = brandSoft;
+    g.ink = ink;
 
-    // 所有使用主色的地方替换
+    // 标题使用主色
     ['h1','h2','h3','h4'].forEach(h => {
       if (state.settings[h]) state.settings[h].color = brand;
     });
+    // 引用块固定黑字白底
     if (state.settings.blockquote) {
-      state.settings.blockquote.color = brand;
-      state.settings.blockquote.bgColor = brandSoft;
+      state.settings.blockquote.textColor = '#000000';
+      state.settings.blockquote.bgColor = '#FFFFFF';
     }
-    if (state.settings.code) {
-      state.settings.code.color = brand;
-      state.settings.code.bgColor = brandSoft;
-    }
-    if (state.settings.ul) state.settings.ul.color = brand;
-    if (state.settings.ol) state.settings.ol.color = brand;
-    if (state.settings.a) { state.settings.a.color = brand; state.settings.a.bgColor = brandSoft; }
-    if (state.settings.hr) state.settings.hr.color = brand;
-    if (state.settings.table) { state.settings.table.color = brand; state.settings.table.bgColor = brandSoft; }
-    if (state.settings.bold) state.settings.bold.color = brand;
+    // 其他元素使用主色/柔底
+    const colorOnly = ['ul', 'ol', 'hr', 'bold'];
+    const colorAndBg = { code: brandSoft, a: brandSoft, table: brandSoft };
+
+    colorOnly.forEach(k => {
+      if (state.settings[k]) state.settings[k].color = brand;
+    });
+    Object.entries(colorAndBg).forEach(([k, bg]) => {
+      if (state.settings[k]) {
+        state.settings[k].color = brand;
+        state.settings[k].bgColor = bg;
+      }
+    });
 
     renderPreview();
     buildSettingsPanel();
@@ -1085,22 +1134,12 @@
   }
 
   function randomizeStyle() {
-    // 随机各元素的 preset
     const randPreset = (arr) => arr[Math.floor(Math.random() * arr.length)].id;
-    state.settings.h1.preset = randPreset(P.h1);
-    state.settings.h2.preset = randPreset(P.h2);
-    state.settings.h3.preset = randPreset(P.h3);
-    state.settings.h4.preset = randPreset(P.h4);
-    state.settings.p.preset  = randPreset(P.p);
-    state.settings.blockquote.preset = randPreset(P.blockquote);
-    state.settings.pre.preset = randPreset(P.pre);
-    state.settings.code.preset = randPreset(P.code);
-    state.settings.ul.preset = randPreset(P.ul);
-    state.settings.ol.preset = randPreset(P.ol);
-    state.settings.a.preset  = randPreset(P.a);
-    state.settings.img.preset = randPreset(P.img);
-    state.settings.hr.preset  = randPreset(P.hr);
-    state.settings.table.preset = randPreset(P.table);
+    const E = state.settings;
+
+    ['h1','h2','h3','h4','p','blockquote','pre','code','ul','ol','a','img','hr','table']
+      .forEach(k => { if (E[k]) E[k].preset = randPreset(P[k]); });
+
     renderPreview();
     buildSettingsPanel();
     toast('🎲 风格已随机');
@@ -1292,14 +1331,16 @@
       state.settings.global.brand = v;
       // cascade brand color to all brand-driven fields
       ['h1','h2','h3','h4'].forEach(k => { if (state.settings[k]) state.settings[k].color = v; });
-      ['blockquote','code','ul','ol','a','hr','table'].forEach(k => { if (state.settings[k]) state.settings[k].color = v; });
+      // 引用装饰色与 global.brand 一致，不设 blockquote.color
+      ['code','ul','ol','a','hr','table'].forEach(k => { if (state.settings[k]) state.settings[k].color = v; });
       if (state.settings.bold) state.settings.bold.color = v;
       renderPreview();
       buildSettingsPanel();
     }));
     box.appendChild(colorField('主色柔底', s.brandSoft, v => {
       state.settings.global.brandSoft = v;
-      ['blockquote','code','a','table'].forEach(k => { if (state.settings[k]) state.settings[k].bgColor = v; });
+      // 引用块背景固定为白，不随柔底联动；code / 链接 / 表格仍用柔底
+      ['code','a','table'].forEach(k => { if (state.settings[k]) state.settings[k].bgColor = v; });
       renderPreview();
       buildSettingsPanel();
     }));
@@ -1373,11 +1414,12 @@
   function buildBlockquoteSection() {
     const s = state.settings.blockquote;
     const box = document.createElement('div');
+    const note = document.createElement('div');
+    note.style.cssText = 'font-size:11px;color:var(--ink-faint);margin-bottom:10px;line-height:1.45';
+    note.textContent = '引用内文字与背景固定为黑字、白底。左边线、引号/提示图标等装饰色与「全局 → 主色调」一致。';
+    box.appendChild(note);
     box.appendChild(presetGrid(P.blockquote, s.preset, id => update('blockquote.preset', id)));
     box.appendChild(sliderField('字号', 12, 20, 1, s.fontSize, v => update('blockquote.fontSize', v), v => v + 'px'));
-    box.appendChild(colorField('主色', s.color, v => update('blockquote.color', v)));
-    box.appendChild(colorField('文字色', s.textColor, v => update('blockquote.textColor', v)));
-    box.appendChild(colorField('背景色', s.bgColor, v => update('blockquote.bgColor', v)));
     return box;
   }
 

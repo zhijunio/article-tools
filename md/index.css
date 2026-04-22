@@ -55,8 +55,8 @@ body {
 .topbar {
   display: flex;
   align-items: center;
-  min-height: 52px;
-  padding: 8px 16px;
+  min-height: 48px;
+  padding: 6px 16px;
   background: var(--panel-bg);
   border-bottom: 1px solid var(--panel-border);
   gap: 10px;
@@ -76,13 +76,48 @@ body {
   margin: 0 2px 0 10px;
   align-self: center;
 }
+.select-theme-label {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
 .topbar-left .select-theme {
-  gap: 5px;
-  padding: 2px 4px 2px 8px;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 9px;
   margin-left: 4px;
+  max-width: min(200px, 36vw);
+  border-color: #e2e8f0;
+  border-radius: 8px;
+  background: #fafbfc;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .topbar-left .select-theme select {
-  padding: 2px 2px;
+  padding: 1px 0 1px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #0f172a;
+  min-width: 0;
+  max-width: 100%;
+  width: auto;
+  flex: 1;
+}
+.topbar-left .select-theme select:focus {
+  color: #0f172a;
+}
+/* 主题说明：预览栏标题右侧 */
+.preview-pane .pane-head .theme-desc-preview {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-weight: 400;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #64748b;
+  text-align: right;
 }
 .topbar-left .btn.ghost {
   padding: 5px 8px;
@@ -244,14 +279,15 @@ body {
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   font-size: 12px;
+  min-width: 0;
 }
 .select-theme select {
   border: none;
   background: transparent;
-  font-family: sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
   font-size: 12px;
   color: #111;
-  padding: 4px 4px;
+  padding: 2px 4px;
   outline: none;
   cursor: pointer;
 }
