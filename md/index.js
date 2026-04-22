@@ -9,6 +9,7 @@
   const BUILTIN_THEME_ORDER = ['youya', 'qingxin', 'wennuan', 'shensui', 'jingdian', 'jijian'];
   let themePresetButtonsBound = false;
   const STORAGE_KEY = 'mp_md_formatter_v1';
+  const FIXED_MAX_WIDTH = 400;
 
   // ============ IndexedDB 图片存储（与 index.html 共用库名，便于数据互通） ============
   class ImageStore {
@@ -268,7 +269,21 @@
 
   // ============ 默认设置 ============
   function defaultSettings() {
-    return JSON.parse(JSON.stringify(THEMES.youya));
+    const s = JSON.parse(JSON.stringify(THEMES.youya));
+    ensureBlockAlignSettings(s);
+    return s;
+  }
+
+  /** 兼容旧配置：补齐块级图片/表格水平对齐设置 */
+  function ensureBlockAlignSettings(settings) {
+    if (!settings || typeof settings !== 'object') return;
+    if (!settings.img) settings.img = {};
+    if (!settings.table) settings.table = {};
+    if (!settings.img.align) settings.img.align = 'center';
+    if (!settings.table.align) settings.table.align = 'left';
+    if (!settings.table.textAlign) settings.table.textAlign = 'left';
+    if (!settings.table.widthMode) settings.table.widthMode = 'fit';
+    if (settings.global) settings.global.maxWidth = FIXED_MAX_WIDTH;
   }
 
   // ============ State ============
@@ -312,6 +327,7 @@
         state.md = parsed.md;
       }
       if (parsed.settings) state.settings = parsed.settings;
+      ensureBlockAlignSettings(state.settings);
       if (parsed.customThemes) state.customThemes = parsed.customThemes;
       if (parsed.currentThemeKey) state.currentThemeKey = parsed.currentThemeKey;
       // mint/retro 已移除 → 转为自定义主题存档，避免重复创建先检查是否已存在
@@ -332,8 +348,8 @@
       }
       if (typeof parsed.settingsPaneCollapsed === 'boolean') state.settingsPaneCollapsed = parsed.settingsPaneCollapsed;
       if (typeof parsed.scrollSyncEnabled === 'boolean') state.scrollSyncEnabled = parsed.scrollSyncEnabled;
-      if (state.settings && state.settings.global && state.settings.global.maxWidth == null) {
-        state.settings.global.maxWidth = 335;
+      if (state.settings && state.settings.global) {
+        state.settings.global.maxWidth = FIXED_MAX_WIDTH;
       }
       normalizeBlockquoteColors();
       migrateBuiltInThemeKey();
@@ -360,13 +376,15 @@
     if (nk !== k) {
       state.currentThemeKey = nk;
       state.settings = JSON.parse(JSON.stringify(THEMES[nk]));
-      syncBoldColorToBrand();
+        ensureBlockAlignSettings(state.settings);
+      syncEmphasisColorsToBrand();
       normalizeBlockquoteColors();
       save();
     } else if (!THEMES[k]) {
       state.currentThemeKey = 'youya';
       state.settings = JSON.parse(JSON.stringify(THEMES.youya));
-      syncBoldColorToBrand();
+        ensureBlockAlignSettings(state.settings);
+      syncEmphasisColorsToBrand();
       normalizeBlockquoteColors();
       save();
     }
@@ -699,9 +717,12 @@
   }
 
   // ============ 主题切换 ============
-  function syncBoldColorToBrand() {
+  function syncEmphasisColorsToBrand() {
     if (state.settings?.bold) {
       state.settings.bold.color = state.settings.global?.brand;
+    }
+    if (state.settings?.italic) {
+      state.settings.italic.color = state.settings.global?.brand;
     }
   }
 
@@ -724,7 +745,8 @@
     } else if (THEMES[key]) {
       state.settings = JSON.parse(JSON.stringify(THEMES[key]));
     }
-    syncBoldColorToBrand();
+    ensureBlockAlignSettings(state.settings);
+    syncEmphasisColorsToBrand();
     normalizeBlockquoteColors();
     renderPreview();
     buildSettingsPanel();
@@ -899,7 +921,7 @@
           };
           state.settings = JSON.parse(JSON.stringify(data.currentSettings));
           state.currentThemeKey = 'custom:' + id;
-          syncBoldColorToBrand();
+          syncEmphasisColorsToBrand();
           normalizeBlockquoteColors();
         }
         save();
@@ -2027,31 +2049,29 @@
     // 1. 全局
     root.appendChild(makeAccordion('global', '全局样式', buildGlobalSection));
     // 2. H1-H4
-    root.appendChild(makeAccordion('h1', '一级标题 H1', () => buildHeadingSection(1)));
-    root.appendChild(makeAccordion('h2', '二级标题 H2', () => buildHeadingSection(2)));
-    root.appendChild(makeAccordion('h3', '三级标题 H3', () => buildHeadingSection(3)));
-    root.appendChild(makeAccordion('h4', '四级标题 H4', () => buildHeadingSection(4)));
+    root.appendChild(makeAccordion('h1', '一级标题', () => buildHeadingSection(1)));
+    root.appendChild(makeAccordion('h2', '二级标题', () => buildHeadingSection(2)));
+    root.appendChild(makeAccordion('h3', '三级标题', () => buildHeadingSection(3)));
+    root.appendChild(makeAccordion('h4', '四级标题', () => buildHeadingSection(4)));
     // 3. 正文
     root.appendChild(makeAccordion('p', '正文段落', buildParagraphSection));
-    // 4. 加粗/斜体
-    root.appendChild(makeAccordion('emph', '加粗 / 斜体', buildEmphSection));
-    // 5. 引用
-    root.appendChild(makeAccordion('bq', '引用 Blockquote', buildBlockquoteSection));
-    // 6. 代码
+    // 4. 引用
+    root.appendChild(makeAccordion('bq', '引用', buildBlockquoteSection));
+    // 5. 代码
     root.appendChild(makeAccordion('pre', '代码块', buildPreSection));
-    // 7. 行内代码
+    // 6. 行内代码
     root.appendChild(makeAccordion('code', '行内代码', buildCodeSection));
-    // 8. 列表
+    // 7. 列表
     root.appendChild(makeAccordion('list', '列表', buildListSection));
-    // 9. 链接
+    // 8. 链接
     root.appendChild(makeAccordion('a', '链接', buildLinkSection));
+    // 9. 分割线
+    root.appendChild(makeAccordion('hr', '分割线', buildHrSection));
     // 10. 图片
     root.appendChild(makeAccordion('img', '图片', buildImgSection));
-    // 11. 分割线
-    root.appendChild(makeAccordion('hr', '分割线', buildHrSection));
-    // 12. 表格
+    // 11. 表格
     root.appendChild(makeAccordion('table', '表格', buildTableSection));
-    // 13. 主题管理（无标题行，仅按钮与列表）
+    // 12. 主题管理（无标题行，仅按钮与列表）
     const themesWrap = document.createElement('div');
     themesWrap.className = 'settings-themes-only';
     themesWrap.appendChild(buildThemesSection());
@@ -2114,15 +2134,31 @@
   }
   function makeFieldInline(label, control, valEl) {
     const f = document.createElement('div');
-    f.className = 'field';
+    f.className = 'field field--inline-control';
     const l = document.createElement('div');
-    l.className = 'field-label';
+    l.className = 'field-label field-label--inline';
     const ls = document.createElement('span'); ls.textContent = label;
     l.appendChild(ls);
-    if (valEl) l.appendChild(valEl);
+    const cw = document.createElement('div');
+    cw.className = 'field-control';
+    if (valEl) {
+      const row = document.createElement('div');
+      row.className = 'field-control-row';
+      row.appendChild(control);
+      row.appendChild(valEl);
+      cw.appendChild(row);
+    } else {
+      cw.appendChild(control);
+    }
     f.appendChild(l);
-    f.appendChild(control);
+    f.appendChild(cw);
     return f;
+  }
+
+  function makeInlineSegField(label, options, activeId, onChange) {
+    const control = seg(options, activeId, onChange);
+    control.classList.add('seg--compact');
+    return makeFieldInline(label, control);
   }
 
   function colorField(label, value, onChange) {
@@ -2172,10 +2208,14 @@
     presets.forEach(p => {
       const btn = document.createElement('button');
       btn.className = 'preset-chip' + (p.id === activeId ? ' active' : '');
-      btn.innerHTML = `
-        <span class="preview-sample">${sampleText ? sampleText(p) : p.name}</span>
-        <span class="preset-name">${p.name}</span>
-      `;
+      if (sampleText) {
+        btn.innerHTML = `
+          <span class="preview-sample">${sampleText(p)}</span>
+          <span class="preset-name">${p.name}</span>
+        `;
+      } else {
+        btn.innerHTML = `<span class="preset-name preset-name--only">${p.name}</span>`;
+      }
       btn.addEventListener('click', () => {
         grid.querySelectorAll('.preset-chip').forEach(x => x.classList.remove('active'));
         btn.classList.add('active');
@@ -2199,6 +2239,7 @@
   function buildGlobalSection() {
     const box = document.createElement('div');
     const s = state.settings.global;
+    const p = state.settings.p;
 
     box.appendChild(colorField('背景色', s.bg, v => { update('global.bg', v); applyPreviewBg(); }));
     box.appendChild(colorField('主色调', s.brand, v => {
@@ -2207,11 +2248,11 @@
       ['h1','h2','h3','h4'].forEach(k => { if (state.settings[k]) state.settings[k].color = v; });
       // 引用装饰色与 global.brand 一致，不设 blockquote.color
       ['code','ul','ol','a','hr','table'].forEach(k => { if (state.settings[k]) state.settings[k].color = v; });
-      if (state.settings.bold) state.settings.bold.color = v;
+      syncEmphasisColorsToBrand();
       renderPreview();
       buildSettingsPanel();
     }));
-    box.appendChild(colorField('主色柔底', s.brandSoft, v => {
+    box.appendChild(colorField('辅色调', s.brandSoft, v => {
       state.settings.global.brandSoft = v;
       // 引用块背景固定为白，不随柔底联动；code / 链接 / 表格仍用柔底
       ['code','a','table'].forEach(k => { if (state.settings[k]) state.settings[k].bgColor = v; });
@@ -2231,8 +2272,9 @@
     ffWrap.addEventListener('change', () => update('global.fontFamily', ffWrap.value));
     box.appendChild(makeFieldInline('字体族', ffWrap));
 
-    const mw = s.maxWidth != null ? s.maxWidth : 335;
-    box.appendChild(sliderField('内容最大宽度', 280, 400, 1, mw, (v) => update('global.maxWidth', v), (v) => v + 'px'));
+    box.appendChild(sliderField('字号', 12, 22, 1, p.fontSize, v => update('p.fontSize', v), v => v + 'px'));
+    box.appendChild(sliderField('行距', 1.4, 2.2, 0.05, p.lineHeight, v => update('p.lineHeight', v), v => Number(v).toFixed(2)));
+    box.appendChild(sliderField('字间距', 0, 2, 0.1, p.letterSpacing, v => update('p.letterSpacing', v), v => Number(v).toFixed(1) + 'px'));
 
     return box;
   }
@@ -2243,14 +2285,9 @@
     const s = state.settings[key];
     const box = document.createElement('div');
 
-    box.appendChild(presetGrid(
-      P[key], s.preset,
-      id => update(key + '.preset', id),
-      (p) => `<span style="font-size:${Math.min(s.fontSize, 15)}px; font-weight:700; color:${s.color};">${p.name.slice(0,4)}</span>`
-    ));
+    box.appendChild(presetGrid(P[key], s.preset, id => update(key + '.preset', id)));
 
     box.appendChild(sliderField('字号', 14, 32, 1, s.fontSize, v => update(key + '.fontSize', v), v => v + 'px'));
-    box.appendChild(colorField('颜色', s.color, v => update(key + '.color', v)));
     return box;
   }
 
@@ -2259,28 +2296,7 @@
     const s = state.settings.p;
     const box = document.createElement('div');
 
-    box.appendChild(presetGrid(
-      P.p, s.preset, id => update('p.preset', id),
-      (p) => '<span style="font-size:13px;color:#000">' + p.name + '</span>'
-    ));
-    box.appendChild(sliderField('字号', 12, 22, 1, s.fontSize, v => update('p.fontSize', v), v => v + 'px'));
-    box.appendChild(sliderField('行距', 1.4, 2.2, 0.05, s.lineHeight, v => update('p.lineHeight', v), v => Number(v).toFixed(2)));
-    box.appendChild(sliderField('字间距', 0, 2, 0.1, s.letterSpacing, v => update('p.letterSpacing', v), v => Number(v).toFixed(1) + 'px'));
-    const pNote = document.createElement('div');
-    pNote.style.cssText = 'font-size:11px;color:var(--ink-faint);margin-top:8px;line-height:1.45';
-    pNote.textContent = '正文段落与列表文字固定为黑色（#000），与主题主色无关。';
-    box.appendChild(pNote);
-    return box;
-  }
-
-  // -- 加粗 斜体
-  function buildEmphSection() {
-    const box = document.createElement('div');
-    const bNote = document.createElement('div');
-    bNote.style.cssText = 'font-size:11px;color:var(--ink-faint);margin-bottom:12px;line-height:1.45';
-    bNote.textContent = '加粗颜色与「全局样式 → 主色调」一致。';
-    box.appendChild(bNote);
-    box.appendChild(colorField('斜体颜色', state.settings.italic.color, v => update('italic.color', v)));
+    box.appendChild(presetGrid(P.p, s.preset, id => update('p.preset', id)));
     return box;
   }
 
@@ -2288,10 +2304,6 @@
   function buildBlockquoteSection() {
     const s = state.settings.blockquote;
     const box = document.createElement('div');
-    const note = document.createElement('div');
-    note.style.cssText = 'font-size:11px;color:var(--ink-faint);margin-bottom:10px;line-height:1.45';
-    note.textContent = '引用内文字与背景固定为黑字、白底。左边线、引号/提示图标等装饰色与「全局 → 主色调」一致。';
-    box.appendChild(note);
     box.appendChild(presetGrid(P.blockquote, s.preset, id => update('blockquote.preset', id)));
     box.appendChild(sliderField('字号', 12, 20, 1, s.fontSize, v => update('blockquote.fontSize', v), v => v + 'px'));
     return box;
@@ -2309,10 +2321,7 @@
   function buildCodeSection() {
     const s = state.settings.code;
     const box = document.createElement('div');
-    box.appendChild(presetGrid(P.code, s.preset, id => update('code.preset', id),
-      (p) => `<code style="background:${s.bgColor}; color:${s.color}; padding:1px 5px; border-radius:3px; font-size:11px;">code</code>`));
-    box.appendChild(colorField('文字色', s.color, v => update('code.color', v)));
-    box.appendChild(colorField('背景色', s.bgColor, v => update('code.bgColor', v)));
+    box.appendChild(presetGrid(P.code, s.preset, id => update('code.preset', id)));
     return box;
   }
 
@@ -2320,22 +2329,11 @@
   function buildListSection() {
     const s = state.settings;
     const box = document.createElement('div');
-
-    const ulH = document.createElement('div');
-    ulH.style.cssText = 'font-size:11.5px; color:var(--ink-soft); font-weight:600; margin:4px 0 8px;';
-    ulH.textContent = '无序列表符号';
-    box.appendChild(ulH);
-    box.appendChild(presetGrid(P.ul, s.ul.preset, id => update('ul.preset', id),
-      (p) => `<span style="color:${s.ul.color}; font-size:14px;">${p.marker} 列表项</span>`));
-    box.appendChild(colorField('符号颜色', s.ul.color, v => update('ul.color', v)));
-
-    const olH = document.createElement('div');
-    olH.style.cssText = 'font-size:11.5px; color:var(--ink-soft); font-weight:600; margin:18px 0 8px;';
-    olH.textContent = '有序列表编号';
-    box.appendChild(olH);
-    box.appendChild(presetGrid(P.ol, s.ol.preset, id => update('ol.preset', id),
-      (p) => `<span style="color:${s.ol.color}; font-size:12px;">${p.name}</span>`));
-    box.appendChild(colorField('编号颜色', s.ol.color, v => update('ol.color', v)));
+    box.appendChild(makeFieldInline('无序列表样式', presetGrid(P.ul, s.ul.preset, id => update('ul.preset', id))));
+    const sep = document.createElement('div');
+    sep.className = 'field-divider';
+    box.appendChild(sep);
+    box.appendChild(makeFieldInline('有序列表样式', presetGrid(P.ol, s.ol.preset, id => update('ol.preset', id))));
     return box;
   }
 
@@ -2344,7 +2342,6 @@
     const s = state.settings.a;
     const box = document.createElement('div');
     box.appendChild(presetGrid(P.a, s.preset, id => update('a.preset', id)));
-    box.appendChild(colorField('颜色', s.color, v => update('a.color', v)));
     return box;
   }
 
@@ -2353,6 +2350,15 @@
     const s = state.settings.img;
     const box = document.createElement('div');
     box.appendChild(presetGrid(P.img, s.preset, id => update('img.preset', id)));
+    box.appendChild(makeInlineSegField(
+      '整块对齐',
+      [
+        { id: 'left', name: '左对齐' },
+        { id: 'center', name: '居中' },
+      ],
+      (s.align === 'right' ? 'left' : (s.align || 'center')),
+      id => update('img.align', id)
+    ));
     return box;
   }
 
@@ -2360,9 +2366,7 @@
   function buildHrSection() {
     const s = state.settings.hr;
     const box = document.createElement('div');
-    box.appendChild(presetGrid(P.hr, s.preset, id => update('hr.preset', id),
-      (p) => p.decorative ? `<span style="color:${s.color}; font-size:12px; letter-spacing:6px;">${p.decorative}</span>` : `<span style="color:${s.color}; font-size:11px;">${p.name}</span>`));
-    box.appendChild(colorField('颜色', s.color, v => update('hr.color', v)));
+    box.appendChild(presetGrid(P.hr, s.preset, id => update('hr.preset', id)));
     return box;
   }
 
@@ -2371,8 +2375,33 @@
     const s = state.settings.table;
     const box = document.createElement('div');
     box.appendChild(presetGrid(P.table, s.preset, id => update('table.preset', id)));
-    box.appendChild(colorField('主色', s.color, v => update('table.color', v)));
-    box.appendChild(colorField('柔底色', s.bgColor, v => update('table.bgColor', v)));
+    box.appendChild(makeInlineSegField(
+      '表格宽度',
+      [
+        { id: 'fit', name: '适应宽度' },
+        { id: 'content', name: '按内容' },
+      ],
+      s.widthMode || 'fit',
+      id => update('table.widthMode', id)
+    ));
+    box.appendChild(makeInlineSegField(
+      '整块对齐',
+      [
+        { id: 'left', name: '左对齐' },
+        { id: 'center', name: '居中' },
+      ],
+      (s.align === 'right' ? 'left' : (s.align || 'left')),
+      id => update('table.align', id)
+    ));
+    box.appendChild(makeInlineSegField(
+      '文字对齐',
+      [
+        { id: 'left', name: '左对齐' },
+        { id: 'center', name: '居中' },
+      ],
+      s.textAlign || 'left',
+      id => update('table.textAlign', id)
+    ));
     return box;
   }
 
@@ -2382,23 +2411,29 @@
 
     const save = document.createElement('button');
     save.className = 'btn primary';
-    save.style.width = '100%';
-    save.textContent = '保存当前样式为新主题';
+    save.type = 'button';
+    save.textContent = '保存主题';
     save.addEventListener('click', () => {
       const n = prompt('为这套主题起个名字：', '我的主题 ' + (Object.keys(state.customThemes).length + 1));
       if (n && n.trim()) saveCustomTheme(n.trim());
     });
-    box.appendChild(save);
 
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex; gap:6px; margin-top:8px;';
     const exp = document.createElement('button');
-    exp.className = 'btn'; exp.style.flex = '1'; exp.textContent = '导出 JSON';
+    exp.className = 'btn';
+    exp.type = 'button';
+    exp.textContent = '导出 JSON';
     exp.addEventListener('click', exportJSON);
     const imp = document.createElement('button');
-    imp.className = 'btn'; imp.style.flex = '1'; imp.textContent = '导入 JSON';
+    imp.className = 'btn';
+    imp.type = 'button';
+    imp.textContent = '导入 JSON';
     imp.addEventListener('click', () => document.getElementById('import-file').click());
-    row.appendChild(exp); row.appendChild(imp);
+
+    const row = document.createElement('div');
+    row.className = 'settings-themes-actions';
+    row.appendChild(save);
+    row.appendChild(exp);
+    row.appendChild(imp);
     box.appendChild(row);
 
     const list = document.createElement('div');
@@ -2464,7 +2499,7 @@
     }
 
     load();
-    syncBoldColorToBrand();
+    syncEmphasisColorsToBrand();
     // 如果没有数据或数据无效，使用示例文章（sample.md）
     const hasValidMd = isValidMdContent(state.md);
     if (!hasValidMd) {
