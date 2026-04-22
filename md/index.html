@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head>
   <meta charset="utf-8">
-  <title>Markdown 编辑器</title>
+  <title>Markdown 编辑器 · 6 种主题</title>
   <meta name="viewport" content="width=1280">
   <link rel="stylesheet" href="index.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css">
@@ -25,10 +25,11 @@
       </div>
       <span class="divider"></span>
 
-      <div class="select-theme">
-        <span class="select-theme-label">主题</span>
-        <select id="theme-select" aria-describedby="theme-desc"></select>
+      <div class="select-theme" role="group" aria-label="主题色">
+        <div class="theme-preset-btns" id="theme-preset-btns" role="radiogroup" aria-label="主题色"></div>
+        <select id="theme-select-custom" class="theme-select-custom" title="已保存的自定义主题" aria-label="已保存的自定义主题" hidden></select>
       </div>
+      <span class="divider" aria-hidden="true"></span>
 
       <button class="btn ghost" id="btn-rand-color" title="随机色系">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="10.5" r="2.5"></circle><circle cx="8.5" cy="7.5" r="2.5"></circle><circle cx="6.5" cy="12.5" r="2.5"></circle><path d="M12 2a10 10 0 1 0 10 10c0-1.5-1.5-2-2.5-1.5-1.1.5-2.3 0-2.5-1.5"></path></svg>
@@ -64,6 +65,10 @@
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
         复制到公众号
       </button>
+      <button type="button" class="btn ghost" id="btn-hotkey-help" title="打开快捷键说明" aria-label="打开快捷键说明" aria-haspopup="dialog" aria-controls="hotkey-dialog" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"></path></svg>
+        快捷键
+      </button>
     </header>
 
     <!-- 主区 三栏 -->
@@ -71,19 +76,65 @@
       <!-- 左：编辑器 -->
       <section class="pane">
         <div class="pane-head">
-          <span>编辑区域</span>
-          <span class="pane-head-hint">粘贴或输入 Markdown 内容</span>
+          <span class="pane-title">编辑器</span>
           <span class="meta" id="meta-chars">0 字</span>
         </div>
-        <div class="pane-body" style="overflow:hidden;">
-          <textarea id="editor" spellcheck="false" placeholder="# 在这里写 Markdown..."></textarea>
+        <div class="pane-body editor-pane">
+          <div class="editor-shell">
+            <div class="editor-toolbar" role="toolbar" aria-label="编辑格式">
+              <span class="editor-tb-group">
+                <button type="button" class="editor-tb-btn editor-tb-btn--letter" data-action="bold" title="加粗"><span class="editor-tb-glyph" aria-hidden="true">B</span></button>
+                <button type="button" class="editor-tb-btn editor-tb-btn--letter" data-action="italic" title="斜体"><span class="editor-tb-glyph editor-tb-glyph--i" aria-hidden="true">I</span></button>
+                <button type="button" class="editor-tb-btn editor-tb-btn--letter" data-action="strike" title="删除线"><span class="editor-tb-glyph editor-tb-glyph--strike" aria-hidden="true">S</span></button>
+                <button type="button" class="editor-tb-btn" data-action="code" title="行内代码">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"></path></svg>
+                </button>
+                <button type="button" class="editor-tb-btn" data-action="link" title="链接">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1"></path></svg>
+                </button>
+              </span>
+              <span class="editor-tb-sep" aria-hidden="true"></span>
+              <span class="editor-tb-group">
+                <button type="button" class="editor-tb-btn" data-action="codeblock" title="代码块">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M9 9h.01M15 9h.01M9 15h6"></path></svg>
+                </button>
+                <button type="button" class="editor-tb-btn" data-action="quote" title="引用">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1zM15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"></path></svg>
+                </button>
+                <button type="button" class="editor-tb-btn" data-action="hr" title="水平分割线（---）">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 12h16"></path></svg>
+                </button>
+                <button type="button" class="editor-tb-btn" data-action="table" title="插入三列表格（GFM）">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M3 9h18M3 15h18M9 3v18M15 3v18"></path></svg>
+                </button>
+              </span>
+              <span class="editor-tb-sep" aria-hidden="true"></span>
+              <span class="editor-tb-group">
+                <button type="button" class="editor-tb-btn editor-tb-btn--sm" data-action="h1" title="一级标题">H1</button>
+                <button type="button" class="editor-tb-btn editor-tb-btn--sm" data-action="h2" title="二级标题">H2</button>
+                <button type="button" class="editor-tb-btn editor-tb-btn--sm" data-action="h3" title="三级标题">H3</button>
+                <button type="button" class="editor-tb-btn editor-tb-btn--sm" data-action="h4" title="四级标题">H4</button>
+                <button type="button" class="editor-tb-btn editor-tb-btn--sm" data-action="p" title="正文">正文</button>
+              </span>
+              <span class="editor-tb-sep" aria-hidden="true"></span>
+              <span class="editor-tb-group">
+                <button type="button" class="editor-tb-btn" data-action="indent" title="增加缩进">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h16M16 9l3 3-3 3"></path></svg>
+                </button>
+                <button type="button" class="editor-tb-btn" data-action="outdent" title="减少缩进">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M8 12h12M4 18h16M8 9l-3 3 3 3"></path></svg>
+                </button>
+              </span>
+            </div>
+            <textarea id="editor" spellcheck="false" placeholder="# 在这里写 Markdown…" title="在此编辑正文，顶栏可打开快捷键说明"></textarea>
+          </div>
         </div>
       </section>
 
       <!-- 中：预览 -->
       <section class="pane preview-pane">
         <div class="pane-head">
-          <span>预览区域</span>
+          <span class="pane-title">预览区</span>
           <span id="theme-desc" class="theme-desc-preview" aria-live="polite"></span>
         </div>
         <div class="pane-body" id="preview-scroll-root">
@@ -95,7 +146,7 @@
                 <span>100%</span>
               </div>
               <div class="preview-article-meta">
-                <div class="title-fake">文章标题</div>
+                <div class="title-fake" id="preview-article-title">文章标题</div>
                 <div class="byline"><span class="acct">公众号名称</span><span>·</span><span>刚刚</span></div>
               </div>
               <div id="preview-content"></div>
@@ -107,9 +158,9 @@
       <!-- 右：样式面板 -->
       <section class="pane settings-pane">
         <div class="pane-head">
-          <span>样式调节</span>
+          <span class="pane-title">样式面板</span>
           <span class="actions">
-            <span style="text-transform:none; letter-spacing:0; color:var(--ink-faint); font-weight:400; font-size:11px;">实时生效</span>
+            <span style="text-transform:none; letter-spacing:0; color:var(--ink-faint); font-weight:400; font-size:10px;">实时生效</span>
             <button type="button" class="pane-toggle-btn" id="settings-toggle" aria-label="折叠样式调节" aria-expanded="true">▸</button>
           </span>
         </div>
@@ -123,12 +174,24 @@
   <!-- 隐藏文件选择器 -->
   <input type="file" id="import-file" accept="application/json" style="display:none">
 
+  <!-- 快捷键说明 -->
+  <div id="hotkey-dialog" class="hotkey-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="hotkey-dialog-title" aria-hidden="true">
+    <div class="hotkey-dialog__backdrop" id="hotkey-dialog-backdrop"></div>
+    <div class="hotkey-dialog__panel" role="document">
+      <div class="hotkey-dialog__head">
+        <h2 class="hotkey-dialog__title" id="hotkey-dialog-title">快捷键</h2>
+        <button type="button" class="hotkey-dialog__close" id="hotkey-dialog-close" title="关闭" aria-label="关闭">×</button>
+      </div>
+      <div class="hotkey-dialog__body" id="hotkey-dialog-body"></div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast" class="toast">提示</div>
 
-  <script src="index.presets.js?v=20260421"></script>
-  <script src="index.renderer.js?v=20260421"></script>
-  <script src="index.js?v=20260421"></script>
+  <script src="index.presets.js?v=20260422"></script>
+  <script src="index.renderer.js?v=20260422"></script>
+  <script src="index.js?v=20260422"></script>
 
 
 </body></html>

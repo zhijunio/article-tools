@@ -209,76 +209,16 @@ window.PRESETS = {
 };
 
 /* ============================================================
-   预设主题：5 款（公众号常见调性）
-   · 暖棕书卷 — 文化/深度/杂志感，衬线
-   · 黑白极简 — 公告/专业/信息密度，无衬线
-   · 科技蓝调 — 互联网/产品/SaaS
-   · 琥珀橙调 — 情感/生活/故事，偏暖活泼
-   · 正红宣调 — 节庆/党建/品牌红，正红+柔底
-   键名：shujuan · jijian · keji · hupo · zhenghong
+   预设主题：6 款（与产品说明图一致）
+   · 优雅蓝 / 清新绿 / 温暖橙 / 深邃紫 / 经典红 / 极简黑
+   键名：youya · qingxin · wennuan · shensui · jingdian · jijian
+   默认 youya
+   旧版键 shujuan·keji·hupo·zhenghong 在 index.js 中迁移
    ============================================================ */
 window.THEMES = {
-  shujuan: {
-    name: '暖棕书卷',
-    desc: '读书、专栏、文化类长文；衬线暖棕，纸感柔和',
-    global: {
-      bg: '#FFFFFF',
-      ink: '#3D2E20',
-      brand: '#C96442',
-      brandSoft: '#F5E3D7',
-      fontFamily: 'serif-zh',
-      maxWidth: 335,
-    },
-    h1: { preset: 'underline', color: '#C96442', fontSize: 22 },
-    h2: { preset: 'leftbar', color: '#C96442', fontSize: 19 },
-    h3: { preset: 'underline', color: '#C96442', fontSize: 17 },
-    h4: { preset: 'caret', color: '#3D2E20', fontSize: 16 },
-    p:  { preset: 'normal', color: '#3D2E20', fontSize: 16, lineHeight: 1.85, letterSpacing: 0.3 },
-    blockquote: { preset: 'leftbar-bg', textColor: '#000000', bgColor: '#FFFFFF', fontSize: 15 },
-    pre: { preset: 'warm-paper' },
-    code: { preset: 'pill-soft', color: '#C96442', bgColor: '#F5E3D7' },
-    ul: { preset: 'diamond', color: '#C96442' },
-    ol: { preset: 'arabic', color: '#C96442' },
-    a: { preset: 'dashed', color: '#C96442' },
-    img: { preset: 'rounded' },
-    hr: { preset: 'diamond', color: '#C96442' },
-    table: { preset: 'softbg', color: '#C96442', bgColor: '#FAF3EB' },
-    bold: { color: '#C96442' },
-    italic: { color: '#5C4A3A' },
-  },
-
-  jijian: {
-    name: '黑白极简',
-    desc: '通知、声明、政策与商务；高对比黑白，信息优先',
-    global: {
-      bg: '#FFFFFF',
-      ink: '#1A1A1A',
-      brand: '#1A1A1A',
-      brandSoft: '#F0F0F0',
-      fontFamily: 'sans-zh',
-      maxWidth: 335,
-    },
-    h1: { preset: 'plain', color: '#1A1A1A', fontSize: 22 },
-    h2: { preset: 'shortbar', color: '#1A1A1A', fontSize: 19 },
-    h3: { preset: 'plain', color: '#1A1A1A', fontSize: 17 },
-    h4: { preset: 'caps', color: '#555555', fontSize: 13 },
-    p:  { preset: 'normal', color: '#1A1A1A', fontSize: 16, lineHeight: 1.8, letterSpacing: 0.2 },
-    blockquote: { preset: 'leftbar-bg', textColor: '#000000', bgColor: '#FFFFFF', fontSize: 15 },
-    pre: { preset: 'subtle-border' },
-    code: { preset: 'grey-ink', color: '#1A1A1A', bgColor: '#F0F0F0' },
-    ul: { preset: 'dash', color: '#1A1A1A' },
-    ol: { preset: 'arabic', color: '#1A1A1A' },
-    a: { preset: 'underline', color: '#1A1A1A' },
-    img: { preset: 'plain' },
-    hr: { preset: 'thin', color: '#CCCCCC' },
-    table: { preset: 'borderless', color: '#1A1A1A', bgColor: '#FAFAFA' },
-    bold: { color: '#1A1A1A' },
-    italic: { color: '#4A4A4A' },
-  },
-
-  keji: {
-    name: '科技蓝调',
-    desc: '产品更新、教程、互联网与开发向内容',
+  youya: {
+    name: '优雅蓝',
+    desc: '优雅蓝：适合产品、技术、资讯与通用长文',
     global: {
       bg: '#FFFFFF',
       ink: '#1E293B',
@@ -305,9 +245,38 @@ window.THEMES = {
     italic: { color: '#334155' },
   },
 
-  hupo: {
-    name: '琥珀橙调',
-    desc: '生活、情感、故事与亲子；暖橙活泼，配图友好',
+  qingxin: {
+    name: '清新绿',
+    desc: '清新绿：适合生活服务、轻阅读与日常分享',
+    global: {
+      bg: '#FFFFFF',
+      ink: '#14532D',
+      brand: '#07C160',
+      brandSoft: '#D1FAE5',
+      fontFamily: 'sans-zh',
+      maxWidth: 335,
+    },
+    h1: { preset: 'softcard', color: '#07C160', fontSize: 22 },
+    h2: { preset: 'leftbar', color: '#07C160', fontSize: 19 },
+    h3: { preset: 'arrow', color: '#07C160', fontSize: 17 },
+    h4: { preset: 'square', color: '#14532D', fontSize: 16 },
+    p:  { preset: 'normal', color: '#14532D', fontSize: 16, lineHeight: 1.8, letterSpacing: 0.2 },
+    blockquote: { preset: 'leftbar-bg', textColor: '#000000', bgColor: '#FFFFFF', fontSize: 15 },
+    pre: { preset: 'github-light' },
+    code: { preset: 'pill-soft', color: '#07C160', bgColor: '#D1FAE5' },
+    ul: { preset: 'check', color: '#07C160' },
+    ol: { preset: 'arabic', color: '#07C160' },
+    a: { preset: 'underline', color: '#07C160' },
+    img: { preset: 'rounded' },
+    hr: { preset: 'gradient', color: '#07C160' },
+    table: { preset: 'zebra', color: '#07C160', bgColor: '#ECFDF5' },
+    bold: { color: '#07C160' },
+    italic: { color: '#166534' },
+  },
+
+  wennuan: {
+    name: '温暖橙',
+    desc: '温暖橙：适合故事、情感、亲子与生活向内容',
     global: {
       bg: '#FFFFFF',
       ink: '#5A3A16',
@@ -334,9 +303,38 @@ window.THEMES = {
     italic: { color: '#6B4A1E' },
   },
 
-  zhenghong: {
-    name: '正红宣调',
-    desc: '节庆、党建、品牌与重要公告；正红醒目，庄重感',
+  shensui: {
+    name: '深邃紫',
+    desc: '深邃紫：适合品牌风、课程、知识付费与深度长文',
+    global: {
+      bg: '#FFFFFF',
+      ink: '#1E1B4B',
+      brand: '#5B21B6',
+      brandSoft: '#EDE9FE',
+      fontFamily: 'sans-zh',
+      maxWidth: 335,
+    },
+    h1: { preset: 'softcard', color: '#5B21B6', fontSize: 22 },
+    h2: { preset: 'leftbar', color: '#5B21B6', fontSize: 19 },
+    h3: { preset: 'labelbg', color: '#5B21B6', fontSize: 17 },
+    h4: { preset: 'softpill', color: '#4C1D95', fontSize: 16 },
+    p:  { preset: 'normal', color: '#1E1B4B', fontSize: 16, lineHeight: 1.8, letterSpacing: 0.2 },
+    blockquote: { preset: 'leftbar-bg', textColor: '#000000', bgColor: '#FFFFFF', fontSize: 15 },
+    pre: { preset: 'github-light' },
+    code: { preset: 'pill-soft', color: '#5B21B6', bgColor: '#EDE9FE' },
+    ul: { preset: 'diamond', color: '#5B21B6' },
+    ol: { preset: 'paren', color: '#5B21B6' },
+    a: { preset: 'dashed', color: '#5B21B6' },
+    img: { preset: 'shadow' },
+    hr: { preset: 'diamond', color: '#5B21B6' },
+    table: { preset: 'softbg', color: '#5B21B6', bgColor: '#F5F3FF' },
+    bold: { color: '#5B21B6' },
+    italic: { color: '#4C1D95' },
+  },
+
+  jingdian: {
+    name: '经典红',
+    desc: '经典红：适合节庆、文化、政务与品牌红色调',
     global: {
       bg: '#FFFFFF',
       ink: '#5C0F0F',
@@ -361,5 +359,34 @@ window.THEMES = {
     table: { preset: 'softbg', color: '#C41E3A', bgColor: '#FCE8E8' },
     bold: { color: '#C41E3A' },
     italic: { color: '#6B2424' },
+  },
+
+  jijian: {
+    name: '极简黑',
+    desc: '极简黑：适合公告、声明、条例与高密度正文',
+    global: {
+      bg: '#FFFFFF',
+      ink: '#1A1A1A',
+      brand: '#1A1A1A',
+      brandSoft: '#F0F0F0',
+      fontFamily: 'sans-zh',
+      maxWidth: 335,
+    },
+    h1: { preset: 'plain', color: '#1A1A1A', fontSize: 22 },
+    h2: { preset: 'shortbar', color: '#1A1A1A', fontSize: 19 },
+    h3: { preset: 'plain', color: '#1A1A1A', fontSize: 17 },
+    h4: { preset: 'caps', color: '#555555', fontSize: 13 },
+    p:  { preset: 'normal', color: '#1A1A1A', fontSize: 16, lineHeight: 1.8, letterSpacing: 0.2 },
+    blockquote: { preset: 'leftbar-bg', textColor: '#000000', bgColor: '#FFFFFF', fontSize: 15 },
+    pre: { preset: 'subtle-border' },
+    code: { preset: 'grey-ink', color: '#1A1A1A', bgColor: '#F0F0F0' },
+    ul: { preset: 'dash', color: '#1A1A1A' },
+    ol: { preset: 'arabic', color: '#1A1A1A' },
+    a: { preset: 'underline', color: '#1A1A1A' },
+    img: { preset: 'plain' },
+    hr: { preset: 'thin', color: '#CCCCCC' },
+    table: { preset: 'borderless', color: '#1A1A1A', bgColor: '#FAFAFA' },
+    bold: { color: '#1A1A1A' },
+    italic: { color: '#4A4A4A' },
   },
 };

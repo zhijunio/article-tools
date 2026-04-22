@@ -5,6 +5,9 @@
 (function () {
   const P = window.PRESETS;
   const THEMES = window.THEMES;
+  /** 顶栏 6 枚主题按钮顺序（与产品图一致） */
+  const BUILTIN_THEME_ORDER = ['youya', 'qingxin', 'wennuan', 'shensui', 'jingdian', 'jijian'];
+  let themePresetButtonsBound = false;
   const STORAGE_KEY = 'mp_md_formatter_v1';
 
   // ============ IndexedDB 图片存储（与 index.html 共用库名，便于数据互通） ============
@@ -265,7 +268,7 @@
 
   // ============ 默认设置 ============
   function defaultSettings() {
-    return JSON.parse(JSON.stringify(THEMES.shujuan));
+    return JSON.parse(JSON.stringify(THEMES.youya));
   }
 
   // ============ State ============
@@ -273,7 +276,7 @@
     md: '',
     settings: defaultSettings(),
     customThemes: {}, // { id: {name, settings} }
-    currentThemeKey: 'shujuan', // shujuan | jijian | keji | hupo | zhenghong | custom:id
+    currentThemeKey: 'youya', // youya | qingxin | wennuan | shensui | jingdian | jijian | custom:id
     settingsPaneCollapsed: false,
     scrollSyncEnabled: true,
   };
@@ -333,8 +336,40 @@
         state.settings.global.maxWidth = 335;
       }
       normalizeBlockquoteColors();
+      migrateBuiltInThemeKey();
       return true;
     } catch (e) { return false; }
+  }
+
+  /** 旧版 5 主题等键名 → 当前 6 主题；无效键回退 youya */
+  function migrateBuiltInThemeKey() {
+    const legacy = {
+      shujuan: 'wennuan',
+      keji: 'youya',
+      hupo: 'wennuan',
+      zhenghong: 'jingdian',
+      claude: 'youya',
+      minimal: 'jijian',
+      tech: 'youya',
+      warm: 'wennuan',
+      hong: 'jingdian',
+    };
+    const k = state.currentThemeKey;
+    if (!k || k.startsWith('custom:')) return;
+    const nk = THEMES[k] ? k : (legacy[k] && THEMES[legacy[k]] ? legacy[k] : 'youya');
+    if (nk !== k) {
+      state.currentThemeKey = nk;
+      state.settings = JSON.parse(JSON.stringify(THEMES[nk]));
+      syncBoldColorToBrand();
+      normalizeBlockquoteColors();
+      save();
+    } else if (!THEMES[k]) {
+      state.currentThemeKey = 'youya';
+      state.settings = JSON.parse(JSON.stringify(THEMES.youya));
+      syncBoldColorToBrand();
+      normalizeBlockquoteColors();
+      save();
+    }
   }
 
   // ============ 示例文章 ============
@@ -397,11 +432,50 @@
     }
   }
 
+  /** 跳过围栏代码块，取首个 ATX 一级标题行（单独一个 #） */
+  function extractFirstH1FromMarkdown(md) {
+    if (!md || typeof md !== 'string') return '';
+    const lines = md.split(/\r?\n/);
+    let inFence = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.trim().startsWith('```')) {
+        inFence = !inFence;
+        continue;
+      }
+      if (inFence) continue;
+      const m = line.match(/^\s{0,3}#(?!#)\s*(.*)$/);
+      if (m) {
+        const t = m[1].trim().replace(/\s+#+\s*$/, '');
+        if (t) return t;
+      }
+    }
+    return '';
+  }
+
+  /** 标题栏展示用：去掉常见行内 md 符号 */
+  function titlePlainForPreview(line) {
+    if (!line) return '';
+    let s = String(line);
+    s = s.replace(/\*\*([^*]+)\*\*/g, '$1');
+    s = s.replace(/\*([^*]+)\*/g, '$1');
+    s = s.replace(/`([^`]+)`/g, '$1');
+    s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+    return s.trim() || '';
+  }
+
   function updateMeta() {
-    const text = (state.md || '').replace(/[#*_`~\->[\]()]/g, '');
+    const md = state.md || '';
+    const text = md.replace(/[#*_`~\->[\]()]/g, '');
     const chars = text.replace(/\s/g, '').length;
     const el = document.getElementById('meta-chars');
     if (el) el.textContent = chars + ' 字';
+
+    const titleEl = document.getElementById('preview-article-title');
+    if (titleEl) {
+      const h1 = extractFirstH1FromMarkdown(md);
+      titleEl.textContent = h1 ? titlePlainForPreview(h1) : '文章标题';
+    }
   }
 
   // ============ Toast ============
@@ -669,34 +743,63 @@
   }
 
   function updateThemeSelect() {
-    const sel = document.getElementById('theme-select');
-    sel.innerHTML = '';
-
-    // 预设主题
-    Object.entries(THEMES).forEach(([k, t]) => {
-      const opt = document.createElement('option');
-      opt.value = k;
-      opt.textContent = t.name;
-      opt.title = t.desc ? `${t.name}：${t.desc}` : t.name;
-      sel.appendChild(opt);
-    });
-
-    // 自定义主题
-    const entries = Object.entries(state.customThemes);
-    if (entries.length) {
-      const sep = document.createElement('option');
-      sep.disabled = true;
-      sep.textContent = '── 我的主题 ──';
-      sel.appendChild(sep);
-      entries.forEach(([id, t]) => {
-        const opt = document.createElement('option');
-        opt.value = 'custom:' + id;
-        opt.textContent = t.name;
-        opt.title = t.name;
-        sel.appendChild(opt);
+    const row = document.getElementById('theme-preset-btns');
+    if (row) {
+      if (!themePresetButtonsBound) {
+        row.innerHTML = '';
+        BUILTIN_THEME_ORDER.forEach((k) => {
+          const t = THEMES[k];
+          if (!t) return;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'theme-preset-btn';
+          btn.dataset.themeKey = k;
+          btn.setAttribute('role', 'radio');
+          btn.setAttribute('aria-checked', 'false');
+          btn.title = t.name;
+          btn.setAttribute('aria-label', t.desc ? `${t.name}。${t.desc}` : t.name);
+          if (t.global && t.global.brand) btn.style.setProperty('--chip', t.global.brand);
+          btn.addEventListener('click', () => applyTheme(k));
+          row.appendChild(btn);
+        });
+        themePresetButtonsBound = true;
+      }
+      row.querySelectorAll('.theme-preset-btn').forEach((btn) => {
+        const k = btn.dataset.themeKey;
+        const on = state.currentThemeKey === k;
+        btn.classList.toggle('is-active', on);
+        btn.setAttribute('aria-checked', on ? 'true' : 'false');
       });
     }
-    sel.value = state.currentThemeKey;
+
+    const customSel = document.getElementById('theme-select-custom');
+    if (customSel) {
+      customSel.innerHTML = '';
+      const entries = Object.entries(state.customThemes);
+      if (entries.length) {
+        const ph = document.createElement('option');
+        ph.value = '';
+        ph.textContent = '已存…';
+        customSel.appendChild(ph);
+        entries.forEach(([id, t]) => {
+          const opt = document.createElement('option');
+          opt.value = 'custom:' + id;
+          opt.textContent = t.name;
+          opt.title = t.name;
+          customSel.appendChild(opt);
+        });
+        customSel.hidden = false;
+        if (state.currentThemeKey.startsWith('custom:')) {
+          customSel.value = state.currentThemeKey;
+        } else {
+          customSel.value = '';
+        }
+      } else {
+        customSel.hidden = true;
+        customSel.value = '';
+      }
+    }
+
     updateThemeDescription();
   }
 
@@ -716,8 +819,8 @@
   function deleteCustomTheme(id) {
     delete state.customThemes[id];
     if (state.currentThemeKey === 'custom:' + id) {
-      state.currentThemeKey = 'shujuan';
-      applyTheme('shujuan');
+      state.currentThemeKey = 'youya';
+      applyTheme('youya');
     }
     save();
     updateThemeSelect();
@@ -931,14 +1034,792 @@
   function insertTextAtCursor(textarea, text) {
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const value = textarea.value;
-    const newValue = value.substring(0, start) + text + value.substring(end);
-    textarea.value = newValue;
-    state.md = newValue;
+    if (typeof textarea.setRangeText === 'function') {
+      textarea.focus();
+      textarea.setRangeText(text, start, end, 'end');
+    } else {
+      const value = textarea.value;
+      textarea.value = value.substring(0, start) + text + value.substring(end);
+    }
+    state.md = textarea.value;
     const pos = start + text.length;
     textarea.selectionStart = textarea.selectionEnd = pos;
     textarea.focus();
     renderPreview();
+  }
+
+  function getLineBounds(value, cursorPos) {
+    let a = cursorPos;
+    while (a > 0 && value[a - 1] !== '\n') a--;
+    let b = cursorPos;
+    while (b < value.length && value[b] !== '\n') b++;
+    return [a, b];
+  }
+
+  /**
+   * 用 setRangeText 替换选区，便于 **Ctrl/⌘+Z 按步撤销**；直写 value 在多数浏览器会冲掉撤销栈。
+   */
+  function replaceEditorRange(textarea, start, end, text) {
+    if (typeof textarea.setRangeText === 'function') {
+      textarea.focus();
+      textarea.setRangeText(text, start, end, 'end');
+    } else {
+      const v = textarea.value;
+      textarea.value = v.substring(0, start) + text + v.substring(end);
+    }
+    state.md = textarea.value;
+    return start + text.length;
+  }
+
+  function wrapEditorSelection(textarea, before, after, emptyLabel) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    const sel = v.substring(s0, s1);
+    const mid = sel || emptyLabel;
+    const ins = before + mid + after;
+    const endPos = replaceEditorRange(textarea, s0, s1, ins);
+    if (!sel && emptyLabel) {
+      textarea.selectionStart = s0 + before.length;
+      textarea.selectionEnd = s0 + before.length + emptyLabel.length;
+    } else {
+      textarea.selectionStart = s0;
+      textarea.selectionEnd = endPos;
+    }
+    renderPreview();
+  }
+
+  /**
+   * 两侧相同、定长标记（**、~~）：再按同快捷键可取消
+   * @param {string} m  如 '**' 或 '~~'，m.length === 2d，前后各 d 个字符
+   */
+  function togglePairedDelimiters(textarea, m, emptyLabel) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    const d = m.length;
+    const sel = v.substring(s0, s1);
+    if (s0 < s1) {
+      if (sel.startsWith(m) && sel.endsWith(m) && sel.length > 2 * d) {
+        const inner = sel.slice(d, -d);
+        replaceEditorRange(textarea, s0, s1, inner);
+        textarea.selectionStart = s0;
+        textarea.selectionEnd = s0 + inner.length;
+        renderPreview();
+        return;
+      }
+      if (s0 >= d && s1 + d <= v.length && v.substring(s0 - d, s0) === m && v.substring(s1, s1 + d) === m) {
+        const inner = v.substring(s0, s1);
+        replaceEditorRange(textarea, s0 - d, s1 + d, inner);
+        const i0 = s0 - d;
+        textarea.selectionStart = i0;
+        textarea.selectionEnd = i0 + inner.length;
+        renderPreview();
+        return;
+      }
+      wrapEditorSelection(textarea, m, m, emptyLabel);
+      return;
+    }
+    const pos = s0;
+    for (let L = 0; L < v.length; ) {
+      const open = v.indexOf(m, L);
+      if (open === -1) break;
+      const close = v.indexOf(m, open + d);
+      if (close === -1) break;
+      const endSpan = close + d;
+      if (pos >= open && pos < endSpan) {
+        const inner = v.substring(open + d, close);
+        replaceEditorRange(textarea, open, endSpan, inner);
+        const c = open + inner.length;
+        textarea.selectionStart = c;
+        textarea.selectionEnd = c;
+        renderPreview();
+        return;
+      }
+      L = endSpan;
+    }
+    wrapEditorSelection(textarea, m, m, emptyLabel);
+  }
+
+  function toggleBoldAtSelection(textarea) {
+    togglePairedDelimiters(textarea, '**', '加粗');
+  }
+
+  /** 斜体 *…*，跳过 **；再按 I 可取消 */
+  function toggleItalicAtSelection(textarea) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    const sel = v.substring(s0, s1);
+    if (s0 < s1) {
+      if (sel.length >= 2 && !sel.startsWith('**') && !sel.endsWith('**') && sel[0] === '*' && sel[sel.length - 1] === '*') {
+        if (sel.length < 2 || (sel[1] !== '*' && sel[sel.length - 2] !== '*')) {
+          const inner = sel.slice(1, -1);
+          replaceEditorRange(textarea, s0, s1, inner);
+          textarea.selectionStart = s0;
+          textarea.selectionEnd = s0 + inner.length;
+          renderPreview();
+          return;
+        }
+      }
+      if (s0 >= 1 && s1 + 1 <= v.length && v[s0 - 1] === '*' && v[s1] === '*' && (s0 < 2 || v[s0 - 2] !== '*') && (s1 + 1 >= v.length || v[s1 + 1] !== '*')) {
+        const inner = v.substring(s0, s1);
+        replaceEditorRange(textarea, s0 - 1, s1 + 1, inner);
+        const i0 = s0 - 1;
+        textarea.selectionStart = i0;
+        textarea.selectionEnd = i0 + inner.length;
+        renderPreview();
+        return;
+      }
+      wrapEditorSelection(textarea, '*', '*', '斜体');
+      return;
+    }
+    const pos = s0;
+    for (let i = 0; i < v.length; ) {
+      if (i + 1 < v.length && v[i] === '*' && v[i + 1] === '*') {
+        i += 2;
+        continue;
+      }
+      if (v[i] !== '*') {
+        i++;
+        continue;
+      }
+      const L = i;
+      let j = L + 1;
+      let R = -1;
+      while (j < v.length) {
+        if (j + 1 < v.length && v[j] === '*' && v[j + 1] === '*') {
+          j += 2;
+          continue;
+        }
+        if (v[j] === '*') {
+          R = j;
+          break;
+        }
+        j++;
+      }
+      if (R === -1) break;
+      const endSpan = R + 1;
+      if (pos >= L && pos < endSpan) {
+        const inner = v.substring(L + 1, R);
+        replaceEditorRange(textarea, L, endSpan, inner);
+        const c = L + inner.length;
+        textarea.selectionStart = c;
+        textarea.selectionEnd = c;
+        renderPreview();
+        return;
+      }
+      i = endSpan;
+    }
+    wrapEditorSelection(textarea, '*', '*', '斜体');
+  }
+
+  function toggleStrikethroughAtSelection(textarea) {
+    togglePairedDelimiters(textarea, '~~', '删除');
+  }
+
+  /** 行内 `，跳过 ``` 围栏；再按 ` 可取消 */
+  function toggleInlineCodeAtSelection(textarea) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    const sel = v.substring(s0, s1);
+    if (s0 < s1) {
+      if (sel[0] === '`' && sel[sel.length - 1] === '`' && sel.length > 1 && !sel.startsWith('``') && !sel.endsWith('``')) {
+        const inner = sel.slice(1, -1);
+        if (!inner.includes('`')) {
+          replaceEditorRange(textarea, s0, s1, inner);
+          textarea.selectionStart = s0;
+          textarea.selectionEnd = s0 + inner.length;
+          renderPreview();
+          return;
+        }
+      }
+      if (s0 >= 1 && s1 + 1 <= v.length && v[s0 - 1] === '`' && v[s1] === '`' && v[s0] !== '`' && v[s1 - 1] !== '`') {
+        const inner = v.substring(s0, s1);
+        if (!inner.includes('`')) {
+          replaceEditorRange(textarea, s0 - 1, s1 + 1, inner);
+          const i0 = s0 - 1;
+          textarea.selectionStart = i0;
+          textarea.selectionEnd = i0 + inner.length;
+          renderPreview();
+          return;
+        }
+      }
+      wrapEditorSelection(textarea, '`', '`', 'code');
+      return;
+    }
+    const pos = s0;
+    const n = v.length;
+    let i = 0;
+    while (i < n) {
+      if (i + 2 < n && v[i] === '`' && v[i + 1] === '`' && v[i + 2] === '`') {
+        const e = v.indexOf('```', i + 3);
+        if (e === -1) { i = n; break; }
+        i = e + 3;
+        continue;
+      }
+      if (v[i] !== '`') {
+        i++;
+        continue;
+      }
+      if (i + 1 < n && v[i] === '`' && v[i + 1] === '`') {
+        i += 2;
+        continue;
+      }
+      const L = i;
+      let R = v.indexOf('`', L + 1);
+      while (R !== -1) {
+        if (R + 2 < n && v[R] === '`' && v[R + 1] === '`' && v[R + 2] === '`') {
+          R = v.indexOf('`', R + 1);
+          continue;
+        }
+        break;
+      }
+      if (R === -1) break;
+      const endSpan = R + 1;
+      if (pos >= L && pos < endSpan) {
+        const inner = v.substring(L + 1, R);
+        replaceEditorRange(textarea, L, endSpan, inner);
+        const c = L + inner.length;
+        textarea.selectionStart = c;
+        textarea.selectionEnd = c;
+        renderPreview();
+        return;
+      }
+      i = endSpan;
+    }
+    wrapEditorSelection(textarea, '`', '`', 'code');
+  }
+
+  /**
+   * 从 t0 处的 `[` 起解析为 `[text](url)`；url 内可含成对括号
+   * @returns {{ start: number, end: number, text: string, href: string } | null}
+   */
+  function tryParseMdInlineLinkAt(v, t0) {
+    if (t0 < 0 || t0 >= v.length || v[t0] !== '[') return null;
+    const mid = v.indexOf('](', t0);
+    if (mid === -1) return null;
+    const textPart = v.substring(t0 + 1, mid);
+    let d = 0;
+    for (let i = mid + 2; i < v.length; i++) {
+      const c = v[i];
+      if (c === '(') d++;
+      else if (c === ')') {
+        if (d === 0) {
+          return { start: t0, end: i + 1, text: textPart, href: v.substring(mid + 2, i) };
+        }
+        d--;
+      }
+    }
+    return null;
+  }
+
+  /** 选区/光标若完全落在同一段行内 [text](url) 上则返回其范围 */
+  function findEnclosingMdLinkAt(v, a, b) {
+    const s0 = Math.min(a, b);
+    const s1 = Math.max(a, b);
+    for (let t0 = s0; t0 >= 0; t0--) {
+      if (v[t0] !== '[') continue;
+      const link = tryParseMdInlineLinkAt(v, t0);
+      if (!link) continue;
+      if (a === b) {
+        if (a >= link.start && a < link.end) return link;
+      } else {
+        if (s0 >= link.start && s1 <= link.end) return link;
+      }
+    }
+    return null;
+  }
+
+  /** 链接 [text](url) 已存在则去 Markdown、只留文案；否则插入链接 */
+  function toggleLinkAtSelection(textarea) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    if (s0 < s1) {
+      if (v[s0] === '[') {
+        const link = tryParseMdInlineLinkAt(v, s0);
+        if (link && link.end === s1) {
+          replaceEditorRange(textarea, s0, s1, link.text);
+          textarea.selectionStart = s0;
+          textarea.selectionEnd = s0 + link.text.length;
+          renderPreview();
+          return;
+        }
+      }
+      const encl = findEnclosingMdLinkAt(v, s0, s1);
+      if (encl) {
+        replaceEditorRange(textarea, encl.start, encl.end, encl.text);
+        const c0 = encl.start;
+        textarea.selectionStart = c0;
+        textarea.selectionEnd = c0 + encl.text.length;
+        renderPreview();
+        return;
+      }
+      insertLinkAtSelection(textarea);
+      return;
+    }
+    const cur = findEnclosingMdLinkAt(v, s0, s0);
+    if (cur) {
+      replaceEditorRange(textarea, cur.start, cur.end, cur.text);
+      const c = cur.start + cur.text.length;
+      textarea.selectionStart = c;
+      textarea.selectionEnd = c;
+      renderPreview();
+      return;
+    }
+    insertLinkAtSelection(textarea);
+  }
+
+  function insertLinkAtSelection(textarea) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    const sel = v.substring(s0, s1);
+    if (sel) {
+      const ins = `[${sel}](https://)`;
+      replaceEditorRange(textarea, s0, s1, ins);
+      const pos = s0 + ins.length - 1;
+      textarea.selectionStart = pos;
+      textarea.selectionEnd = pos;
+    } else {
+      const ins = '[链接文字](https://)';
+      replaceEditorRange(textarea, s0, s1, ins);
+      textarea.selectionStart = s0 + 1;
+      textarea.selectionEnd = s0 + 1 + 4;
+    }
+    renderPreview();
+  }
+
+  /** 当前行标题层级 0–4，与 setCurrentLineHeading 的 # 条带一致 */
+  function lineHeadingLevelAndContent(line) {
+    const content = line.replace(/^\s{0,3}#{0,4}\s*/, '');
+    const led = line.length - content.length;
+    if (led === 0) return { level: 0, content: line };
+    const mt = line.match(/^\s{0,3}(#+)/);
+    if (!mt) return { level: 0, content: line };
+    return { level: Math.min(4, mt[1].length), content };
+  }
+
+  function setCurrentLineHeading(textarea, level) {
+    if (level < 0 || level > 4) return;
+    const v = textarea.value;
+    const pos = textarea.selectionStart;
+    const [l0, l1] = getLineBounds(v, pos);
+    const line = v.substring(l0, l1);
+    const { level: cur, content } = lineHeadingLevelAndContent(line);
+    if (level > 0 && cur === level) {
+      const newLine = content;
+      replaceEditorRange(textarea, l0, l1, newLine);
+      textarea.selectionStart = textarea.selectionEnd = l0 + newLine.length;
+      renderPreview();
+      return;
+    }
+    const newLine = level === 0
+      ? content
+      : (content ? '#'.repeat(level) + ' ' + content : '#'.repeat(level) + ' ');
+    replaceEditorRange(textarea, l0, l1, newLine);
+    textarea.selectionStart = textarea.selectionEnd = l0 + newLine.length;
+    renderPreview();
+  }
+
+  function toggleBlockquoteAtLine(textarea) {
+    const v = textarea.value;
+    const pos = textarea.selectionStart;
+    const [l0, l1] = getLineBounds(v, pos);
+    const line = v.substring(l0, l1);
+    const newLine = /^\s*>/.test(line)
+      ? line.replace(/^\s*>\s?/, '')
+      : (line.trim() === '' ? '> ' : `> ${line.replace(/^\s*>\s*/, '')}`);
+    replaceEditorRange(textarea, l0, l1, newLine);
+    textarea.selectionStart = textarea.selectionEnd = l0 + newLine.length;
+    renderPreview();
+  }
+
+  function insertFencedCodeBlock(textarea) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    const sel = v.substring(s0, s1);
+    const block = '```\n' + (sel || '') + '\n```\n';
+    replaceEditorRange(textarea, s0, s1, block);
+    if (!sel) {
+      textarea.selectionStart = s0 + 4;
+      textarea.selectionEnd = s0 + 4;
+    } else {
+      textarea.selectionStart = s0;
+      textarea.selectionEnd = s0 + block.length;
+    }
+    renderPreview();
+  }
+
+  /** 选区为完整 ```…``` 时拆围栏，否则包一层 */
+  function toggleFencedCodeAtSelection(textarea) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    if (s0 < s1) {
+      const sel = v.substring(s0, s1);
+      const m = sel.match(/^```[a-zA-Z0-9_+-]*\r?\n([\s\S]*)\r?\n```\s*$/);
+      if (m) {
+        const inner = m[1];
+        replaceEditorRange(textarea, s0, s1, inner);
+        textarea.selectionStart = s0;
+        textarea.selectionEnd = s0 + inner.length;
+        renderPreview();
+        return;
+      }
+    }
+    insertFencedCodeBlock(textarea);
+  }
+
+  const GFM_TABLE_3COL =
+    '|  |  |  |\n' +
+    '| --- | --- | --- |\n' +
+    '|  |  |  |\n';
+
+  /** 在当前位置插入 GFM 水平线（`---`）；有选区时在选区后插入。 */
+  function insertHorizontalRuleAtCursor(textarea) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    const after = '\n\n---\n\n';
+    if (s0 !== s1) {
+      const end = replaceEditorRange(textarea, s1, s1, after);
+      textarea.selectionStart = textarea.selectionEnd = end;
+      renderPreview();
+      return;
+    }
+    const [l0, l1] = getLineBounds(v, s0);
+    const line = v.substring(l0, l1);
+    if (line.trim() === '') {
+      const ins = '---\n';
+      replaceEditorRange(textarea, l0, l1, ins);
+      textarea.selectionStart = textarea.selectionEnd = l0 + ins.length;
+    } else {
+      const end = replaceEditorRange(textarea, l1, l1, after);
+      textarea.selectionStart = textarea.selectionEnd = end;
+    }
+    renderPreview();
+  }
+
+  /**
+   * 插入三列 GFM 空表。有选区时在选区末尾后插入；光标在空行时整行替换为表。
+   */
+  function insertTableGfm3ColAtCursor(textarea) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    const prefix = '\n\n';
+    if (s0 !== s1) {
+      replaceEditorRange(textarea, s1, s1, prefix + GFM_TABLE_3COL);
+      const c = s1 + prefix.length + 2;
+      textarea.selectionStart = textarea.selectionEnd = c;
+      renderPreview();
+      return;
+    }
+    const [l0, l1] = getLineBounds(v, s0);
+    const line = v.substring(l0, l1);
+    if (line.trim() === '') {
+      replaceEditorRange(textarea, l0, l1, GFM_TABLE_3COL);
+      textarea.selectionStart = textarea.selectionEnd = l0 + 2;
+    } else {
+      replaceEditorRange(textarea, l1, l1, prefix + GFM_TABLE_3COL);
+      const c = l1 + prefix.length + 2;
+      textarea.selectionStart = textarea.selectionEnd = c;
+    }
+    renderPreview();
+  }
+
+  function indentOrOutdentLine(textarea, outdent) {
+    const s0 = textarea.selectionStart;
+    const s1 = textarea.selectionEnd;
+    const v = textarea.value;
+    if (s0 === s1) {
+      const [l0, l1] = getLineBounds(v, s0);
+      const line = v.substring(l0, l1);
+      const pos = s0;
+      if (outdent) {
+        const m = /^(  |\t)/.exec(line);
+        if (!m) {
+          renderPreview();
+          return;
+        }
+        const newLine = line.replace(/^(  |\t)/, '') || line;
+        const removed = line.length - newLine.length;
+        replaceEditorRange(textarea, l0, l1, newLine);
+        let p;
+        if (removed > 0 && pos < l0 + removed) {
+          p = l0;
+        } else {
+          p = pos - removed;
+        }
+        textarea.selectionStart = textarea.selectionEnd = p;
+      } else {
+        const newLine = '  ' + line;
+        replaceEditorRange(textarea, l0, l1, newLine);
+        textarea.selectionStart = textarea.selectionEnd = pos + 2;
+      }
+    } else {
+      const seg = v.substring(s0, s1);
+      const lines = seg.split('\n');
+      const modLines = lines.map((ln) => (outdent ? ln.replace(/^(  |\t)/, '') || ln : '  ' + ln));
+      const newSeg = modLines.join('\n');
+      if (outdent) {
+        replaceEditorRange(textarea, s0, s1, newSeg);
+        textarea.setSelectionRange(s0, s0 + newSeg.length);
+      } else {
+        replaceEditorRange(textarea, s0, s1, newSeg);
+        const n0 = s0 + 2;
+        const n1 = s0 + newSeg.length;
+        textarea.setSelectionRange(n0, n1);
+      }
+    }
+    renderPreview();
+  }
+
+  const HOTKEY_HELP_SECTIONS = [
+    {
+      title: '文字与链接（已包裹时多数可再按同键取消）',
+      items: [
+        { k: '⌘/Ctrl + B', d: '加粗' },
+        { k: '⌘/Ctrl + I', d: '斜体' },
+        { k: '⌘/Ctrl + E', d: '删除线' },
+        { k: '⌘/Ctrl + K', d: '链接；光标在链接内可整段去 Markdown' },
+        { k: '⌘/Ctrl + `', d: '行内代码' },
+      ],
+    },
+    {
+      title: '代码与引用',
+      items: [
+        { k: '⌘/Ctrl + Shift + K', d: '代码块' },
+        { n: '选区为整段代码围栏时再次按下可拆围栏' },
+        { k: '⌘/Ctrl + Shift + >', d: '行首加引用' },
+        { n: '行首已有 > 时再次可减一层' },
+        { n: '顶栏可插入水平线（---）与三列 GFM 表格' },
+      ],
+    },
+    {
+      title: '标题（需同时按 ⌘/Ctrl + Alt，减少与浏览器标签快捷键冲突）',
+      items: [
+        { k: 'Alt + 1～4', d: '一级～四级标题' },
+        { n: '与当前行已是同级标题时，再按同数字键可恢复为正文' },
+        { k: 'Alt + 0', d: '本行恢复为正文' },
+      ],
+    },
+    {
+      title: '缩进、存盘、帮助',
+      items: [
+        { k: 'Tab / Shift+Tab', d: '行首增加/减少缩进' },
+        { n: '不加 Ctrl/⌘' },
+        { k: '⌘/Ctrl + S', d: '保存到本机' },
+        { k: '⌘/Ctrl + /  或  ⌘/Ctrl + ?', d: '打开本说明窗口' },
+      ],
+    },
+  ];
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function buildHotkeyHelpHtml() {
+    return HOTKEY_HELP_SECTIONS.map((sec) => {
+      const li = sec.items.map((it) => {
+        if (it.n && !it.k) {
+          return `<li class="hotkey-line hotkey-line--note">${escapeHtml(it.n)}</li>`;
+        }
+        if (it.k) {
+          const sub = it.n ? ` <span class="hotkey-sub">${escapeHtml(it.n)}</span>` : '';
+          return `<li class="hotkey-line"><span class="hotkey-keys">${escapeHtml(it.k)}</span> <span class="hotkey-desc">${escapeHtml(it.d || '')}</span>${sub}</li>`;
+        }
+        return '';
+      }).join('');
+      return (
+        `<section class="hotkey-sec">` +
+        `<h3 class="hotkey-sec__title">${escapeHtml(sec.title)}</h3>` +
+        `<ul class="hotkey-sec__list">${li}</ul></section>`
+      );
+    }).join('');
+  }
+
+  let hotkeyDialogLastFocus = null;
+  function openHotkeyHelpModal() {
+    const root = document.getElementById('hotkey-dialog');
+    const body = document.getElementById('hotkey-dialog-body');
+    if (!root || !body) return;
+    if (!root.hidden) return;
+    if (!body.dataset.filled) {
+      body.innerHTML = buildHotkeyHelpHtml();
+      body.dataset.filled = '1';
+    }
+    hotkeyDialogLastFocus = document.activeElement;
+    root.hidden = false;
+    root.setAttribute('aria-hidden', 'false');
+    const tbtn = document.getElementById('btn-hotkey-help');
+    if (tbtn) tbtn.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('hotkey-dialog-open');
+    const close = document.getElementById('hotkey-dialog-close');
+    if (close) close.focus();
+  }
+
+  function closeHotkeyHelpModal() {
+    const root = document.getElementById('hotkey-dialog');
+    if (!root) return;
+    root.hidden = true;
+    root.setAttribute('aria-hidden', 'true');
+    const tbtn = document.getElementById('btn-hotkey-help');
+    if (tbtn) tbtn.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('hotkey-dialog-open');
+    if (hotkeyDialogLastFocus && typeof hotkeyDialogLastFocus.focus === 'function') {
+      try {
+        hotkeyDialogLastFocus.focus();
+      } catch (_e) {
+        /* empty */
+      }
+    }
+  }
+
+  function bindHotkeyDialog() {
+    const root = document.getElementById('hotkey-dialog');
+    const body = document.getElementById('hotkey-dialog-body');
+    if (!root || !body) return;
+    const btn = document.getElementById('btn-hotkey-help');
+    const close = document.getElementById('hotkey-dialog-close');
+    const backdrop = document.getElementById('hotkey-dialog-backdrop');
+    if (btn) btn.addEventListener('click', () => openHotkeyHelpModal());
+    if (close) close.addEventListener('click', () => closeHotkeyHelpModal());
+    if (backdrop) backdrop.addEventListener('click', () => closeHotkeyHelpModal());
+    document.addEventListener('keydown', (e) => {
+      if (e.isComposing) return;
+      if (e.key === 'Escape' && root && !root.hidden) {
+        e.preventDefault();
+        closeHotkeyHelpModal();
+      }
+    });
+  }
+
+  /** 编辑区顶栏：与快捷键共用同一套插入/切换逻辑；mousedown 防止焦点抢走选区 */
+  function bindEditorToolbar(textarea) {
+    const bar = document.querySelector('.editor-toolbar');
+    if (!bar) return;
+    const run = {
+      bold: () => toggleBoldAtSelection(textarea),
+      italic: () => toggleItalicAtSelection(textarea),
+      strike: () => toggleStrikethroughAtSelection(textarea),
+      code: () => toggleInlineCodeAtSelection(textarea),
+      link: () => toggleLinkAtSelection(textarea),
+      codeblock: () => toggleFencedCodeAtSelection(textarea),
+      quote: () => toggleBlockquoteAtLine(textarea),
+      hr: () => insertHorizontalRuleAtCursor(textarea),
+      table: () => insertTableGfm3ColAtCursor(textarea),
+      h1: () => setCurrentLineHeading(textarea, 1),
+      h2: () => setCurrentLineHeading(textarea, 2),
+      h3: () => setCurrentLineHeading(textarea, 3),
+      h4: () => setCurrentLineHeading(textarea, 4),
+      p: () => setCurrentLineHeading(textarea, 0),
+      indent: () => indentOrOutdentLine(textarea, false),
+      outdent: () => indentOrOutdentLine(textarea, true),
+    };
+    bar.querySelectorAll('[data-action]').forEach((btn) => {
+      const key = btn.dataset.action;
+      const fn = run[key];
+      if (!fn) return;
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+      });
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        textarea.focus();
+        fn();
+      });
+    });
+  }
+
+  function bindEditorHotkeys(textarea) {
+    const onKey = (e) => {
+      if (e.isComposing) return;
+      if (e.defaultPrevented) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          indentOrOutdentLine(textarea, e.shiftKey);
+        }
+        return;
+      }
+      if (e.key === 'b' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleBoldAtSelection(textarea);
+        return;
+      }
+      if (e.key === 'i' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleItalicAtSelection(textarea);
+        return;
+      }
+      if (e.key === 'e' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleStrikethroughAtSelection(textarea);
+        return;
+      }
+      if (e.shiftKey && (e.key === 'K' || e.key === 'k' || e.code === 'KeyK')) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleFencedCodeAtSelection(textarea);
+        return;
+      }
+      if (!e.shiftKey && (e.key === 'k' || e.key === 'K' || e.code === 'KeyK')) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleLinkAtSelection(textarea);
+        return;
+      }
+      if (e.key === '`' || e.code === 'Backquote') {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleInlineCodeAtSelection(textarea);
+        return;
+      }
+      if (e.key === 's' && !e.shiftKey) {
+        e.preventDefault();
+        save();
+        toast('已保存到本机', 1200);
+        return;
+      }
+      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        openHotkeyHelpModal();
+        return;
+      }
+      if (e.key === '/' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        openHotkeyHelpModal();
+        return;
+      }
+      if (mod && e.key === '>' && e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleBlockquoteAtLine(textarea);
+        return;
+      }
+      if (mod && e.altKey && (e.key === '0' || e.key === '1' || e.key === '2' || e.key === '3' || e.key === '4')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setCurrentLineHeading(textarea, e.key === '0' ? 0 : parseInt(e.key, 10));
+        return;
+      }
+    };
+    textarea.addEventListener('keydown', onKey, { capture: true });
   }
 
   async function handleImageUpload(file, textarea) {
@@ -970,11 +1851,7 @@
       const markdownImage = `![${imageName}](img://${imageId})`;
       if (textarea) {
         const currentPos = textarea.selectionStart;
-        const before = state.md.substring(0, currentPos);
-        const after = state.md.substring(currentPos);
-        state.md = before + markdownImage + after;
-        textarea.value = state.md;
-        const newPos = currentPos + markdownImage.length;
+        const newPos = replaceEditorRange(textarea, currentPos, currentPos, markdownImage);
         textarea.selectionStart = textarea.selectionEnd = newPos;
         textarea.focus();
       } else {
@@ -1062,11 +1939,8 @@
         const textarea = event.target;
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
-        const value = textarea.value;
-        const newValue = value.substring(0, start) + markdown + value.substring(end);
-        textarea.value = newValue;
-        state.md = newValue;
-        textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
+        const newPos = replaceEditorRange(textarea, start, end, markdown);
+        textarea.selectionStart = textarea.selectionEnd = newPos;
         textarea.focus();
         renderPreview();
         toast('已智能转换为 Markdown');
@@ -1539,13 +2413,19 @@
 
   // ============ 绑定顶栏 ============
   function bindTopbar() {
-    document.getElementById('theme-select').addEventListener('change', e => applyTheme(e.target.value));
+    const themeCustom = document.getElementById('theme-select-custom');
+    if (themeCustom) {
+      themeCustom.addEventListener('change', (e) => {
+        const v = e.target.value;
+        if (v) applyTheme(v);
+      });
+    }
     document.getElementById('btn-copy-rich').addEventListener('click', copyRichText);
     document.getElementById('btn-copy-html').addEventListener('click', copyHTML);
     document.getElementById('btn-rand-color').addEventListener('click', randomizeColors);
     document.getElementById('btn-rand-style').addEventListener('click', randomizeStyle);
     document.getElementById('btn-reset').addEventListener('click', () => {
-      if (confirm('重置为暖棕书卷主题？自定义主题不会被删除。')) {
+      if (confirm('重置为优雅蓝主题？自定义主题不会被删除。')) {
         localStorage.clear();
         location.reload();
       }
@@ -1616,6 +2496,10 @@
         toast('只支持拖拽图片文件');
       }
     });
+
+    bindHotkeyDialog();
+    bindEditorHotkeys(ed);
+    bindEditorToolbar(ed);
 
     bindTopbar();
     bindScrollSync();
